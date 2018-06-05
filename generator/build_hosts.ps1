@@ -51,7 +51,7 @@ if(!($hosts))
 
 # Fetch Wildcards
 
-Write-Output "--> Fetching Wildcards"
+Write-Output "--> Fetching wildcards"
 
 $wildcards         = (Get-Content $local_wildcards) -split '\n' | Where {$_}
 
@@ -67,9 +67,11 @@ $hosts             = Parse-Hosts -hosts $hosts
 
 # Output host count prior to removals
 
-Write-Output "--> Valid Hosts Detected: $($hosts.count)"
+Write-Output "--> Valid hosts detected: $($hosts.count)"
 
 # Update Regex Removals
+
+Write-Output "--> Updating regex criteria"
 
 Update-Regex-Removals -whitelist $whitelist -wildcards $wildcards -out_file $local_regex
 

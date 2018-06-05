@@ -124,7 +124,7 @@ Function Update-Regex-Removals
         
             $wl_host          = $wl_host -replace "\.", "\."
 
-            $wl_host_prefix   = "(?sim)^("
+            $wl_host_prefix   = "^("
             $wl_host_suffix   = ")$"
 
             $wl_host          = $wl_host_prefix + $wl_host + $wl_host_suffix
@@ -145,7 +145,7 @@ Function Update-Regex-Removals
             $wildcard          = $wildcard -replace "\.", "\." `
                                            -replace "\*", "(.*)"
 
-            $wildcard_prefix   = "(?sim)^("
+            $wildcard_prefix   = "^("
             $wildcard_suffix   = ")$"
 
             $wildcard          = $wildcard_prefix + $wildcard + $wildcard_suffix
@@ -162,7 +162,7 @@ Function Update-Regex-Removals
         $updated_regex_arr = ($updated_regex_arr).ToLower() | Sort-Object -Unique
    
         # Output to file
-        $updated_regex_arr     = $updated_regex_arr -join "`n"
+        $updated_regex_arr = $updated_regex_arr -join "`n"
 
         [System.IO.File]::WriteAllText($out_file,$updated_regex_arr)
     }
@@ -181,12 +181,16 @@ Function Regex-Remove
 
     # Loop through each regex and select only non-matching items
     foreach($regex in $local_regex)
-    {   
-            $hosts    = $hosts | Select-String $regex -NotMatch
+    {
+        # Single line, multi line, case insensitive
+        $regex = "(?sim)$regex"
+        
+        # Select hosts that do not match regex
+        $hosts = $hosts | Select-String $regex -NotMatch
     }
 
     # Remove MatchInfo after regex removals
-    $hosts        = $hosts -replace ''
+    $hosts = $hosts -replace ''
 
     return $hosts
 
