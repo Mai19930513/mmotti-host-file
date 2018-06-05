@@ -1,0 +1,3 @@
+adservice.google.co.uk
+events.redditmedia.com
+www.googletagmanager.com
