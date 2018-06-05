@@ -2,7 +2,7 @@
 
 The aim of this host file has been to keep the amount of hosts as small as possible. Bigger isn't always better, especially with the effective use of wildcards and pruning of dead hosts.
 
-**New**: **3000+** useless dead domains removed.
+**New**: **2000+** useless dead domains removed.
 
 #### https://raw.githubusercontent.com/mmotti/mmotti-host-file/master/hosts
 
