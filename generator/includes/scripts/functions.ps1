@@ -85,6 +85,10 @@ Function Parse-Hosts
     # Remove www prefixes
     $hosts        = $hosts -replace '^(www)([0-9]{0,3})?(\.)'
 
+    # Handling for non-standard filters
+    # Replace ||something.com^, ||something.com^$third-party etc w/ something.com
+    $hosts        = $hosts -replace '^((\|\|)([A-Z0-9-_.]+)(\^).*)$', '$3'
+
     # Only select 'valid' URLs
     $hosts        = $hosts | Select-String '(?sim)(localhost)' -NotMatch `
                            | Select-String '(?sim)(?=^.{4,253}$)(^((?!-)[a-z0-9-]{1,63}(?<!-)\.)+[a-z]{2,63}$)|^([\*])([A-Z0-9-_.]+)$|^([A-Z0-9-_.]+)([\*])$|^([\*])([A-Z0-9-_.]+)([\*])$' -AllMatches

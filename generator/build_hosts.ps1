@@ -15,10 +15,11 @@ $parent_dir       = Split-Path $PSScriptRoot
 $out_file         = "$parent_dir\hosts"
 
 $web_host_files   = 'http://someonewhocares.org/hosts/hosts',`
-                    'https://pgl.yoyo.org/adservers/serverlist.php?hostformat=hosts&showintro=0', `
+                    'https://pgl.yoyo.org/adservers/serverlist.php?hostformat=hosts&showintro=0',`
                     'https://zeustracker.abuse.ch/blocklist.php?download=domainblocklist',`
                     'https://s3.amazonaws.com/lists.disconnect.me/simple_tracking.txt',`
-                    'https://s3.amazonaws.com/lists.disconnect.me/simple_ad.txt'
+                    'https://s3.amazonaws.com/lists.disconnect.me/simple_ad.txt',`
+                    'https://filters.adtidy.org/extension/chromium/filters/11.txt'
 
 $local_host_dir   = "$PSScriptRoot\includes\hosts"
 $local_host_files = "$PSScriptRoot\includes\config\blacklist.txt"
