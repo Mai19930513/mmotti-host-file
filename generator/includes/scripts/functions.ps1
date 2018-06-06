@@ -40,7 +40,7 @@
             $WHL = (Get-Content $dwn_host) -split "\n" | Where {$_}
 
             # Test for a filter list
-            # We need to do alter the host file before it's passed for processing
+            # We need to alter the host file before it's passed for processing
             $filter_list  = $WHL | Select-String "((?<=^\|\|)([A-Z0-9-_.]+)(?=\^([$]third-party)?$))" -AllMatches
 
             # If we are processing a filter list
