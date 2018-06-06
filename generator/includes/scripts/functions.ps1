@@ -39,6 +39,16 @@
             # Read it
             $WHL = (Get-Content $dwn_host) -split "\n" | Where {$_}
 
+            # Regex criteria to check if host file is a filter list
+            $filter_regex = "((?<=^\|\|)([A-Z0-9-_.]+)(?=\^$))"
+
+            # If the host file is a filter list
+            if($WHL -match $filter_regex)
+            {           
+               # Only capture compatible hosts
+               $WHL = $WHL | Select-String $filter_regex -AllMatches | % {$_.matches.value}
+            }
+
             # Add hosts to array
             $hosts += $WHL
             
@@ -84,10 +94,6 @@ Function Parse-Hosts
 
     # Remove www prefixes
     $hosts        = $hosts -replace '^(www)([0-9]{0,3})?(\.)'
-
-    # Handling for non-standard filters
-    # Replace ||something.com^, ||something.com^$third-party etc w/ something.com
-    $hosts        = $hosts -replace '^((\|\|)([A-Z0-9-_.]+)(\^).*)$', '$3'
 
     # Only select 'valid' URLs
     $hosts        = $hosts | Select-String '(?sim)(localhost)' -NotMatch `
