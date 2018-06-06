@@ -37,7 +37,7 @@
             (New-Object System.Net.Webclient).DownloadFile($host_file, $dwn_host)
 
             # Read it
-            $WHL = (Get-Content $dwn_host) -split "\n" | Where {$_}
+            $WHL = (Get-Content $dwn_host) | Where {$_}
 
             # Test for a filter list
             # We need to alter the host file before it's passed for processing
@@ -66,7 +66,7 @@
         foreach($host_file in $l_host_files)
         {
            # Read it
-           $LHL = (Get-Content $host_file) -split '\n' | Where {$_}
+           $LHL = (Get-Content $host_file) | Where {$_}
 
            # Add non-wildcard hosts to  array
            $hosts += $LHL
