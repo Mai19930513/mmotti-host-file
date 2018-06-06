@@ -149,6 +149,7 @@
 ^(gcirm\.(.*))$
 ^(oas\.(.*))$
 ^(oascentral\.(.*))$
+^(phonearena\.com)$
 ^(phorm\.(.*))$
 ^(pixel\.(.*))$
 ^(protection\.(.*))$

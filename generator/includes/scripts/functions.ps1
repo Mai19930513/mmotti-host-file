@@ -39,14 +39,15 @@
             # Read it
             $WHL = (Get-Content $dwn_host) -split "\n" | Where {$_}
 
-            # Regex criteria to check if host file is a filter list
-            $filter_regex = "((?<=^\|\|)([A-Z0-9-_.]+)(?=\^$))"
+            # Test for a filter list
+            # We need to do alter the host file before it's passed for processing
+            $filter_list  = $WHL | Select-String "((?<=^\|\|)([A-Z0-9-_.]+)(?=\^([$]third-party)?$))" -AllMatches
 
-            # If the host file is a filter list
-            if($WHL -match $filter_regex)
-            {           
-               # Only capture compatible hosts
-               $WHL = $WHL | Select-String $filter_regex -AllMatches | % {$_.matches.value}
+            # If we are processing a filter list
+            if($filter_list)
+            {
+                # Only capture compatible hosts
+                $WHL = $filter_list | % {$_.Matches.Value}
             }
 
             # Add hosts to array
@@ -70,7 +71,7 @@
            # Add non-wildcard hosts to  array
            $hosts += $LHL
         }
-    }
+    }    
 
     return $hosts
 }
