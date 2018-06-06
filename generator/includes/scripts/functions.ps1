@@ -153,8 +153,8 @@ Function Update-Regex-Removals
         foreach($wildcard in $wildcards)
         {
         
-            $wildcard          = $wildcard -replace "\.", "\." `
-                                           -replace "\*", "(.*)"
+            $wildcard          = $wildcard -replace '^(\*\.)(.*)', '(.*)(\.$2)' `
+                                           -replace '(.*)(\.\*)$', '($1\.)(.*)'
 
             $wildcard_prefix   = "^("
             $wildcard_suffix   = ")$"
@@ -263,7 +263,7 @@ Function Check-Heartbeat
     }
 
     # Remove progress bar
-    Write-Progress -Completed
+    Write-Progress -Completed -Activity "Querying Hosts"
 
     # Join array on a new line
     $nx_hosts = $nx_hosts -join "`n"
