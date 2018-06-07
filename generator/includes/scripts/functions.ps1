@@ -39,16 +39,8 @@
             # Read it
             $WHL = (Get-Content $dwn_host) | Where {$_}
 
-            # Test for a filter list
-            # We need to alter the host file before it's passed for processing
-            $filter_list  = $WHL | Select-String "((?<=^\|\|)([A-Z0-9-_.]+)(?=\^([$]third-party)?$))" -AllMatches
-
-            # If we are processing a filter list
-            if($filter_list)
-            {
-                # Only capture compatible hosts
-                $WHL = $filter_list | % {$_.Matches.Value}
-            }
+            # Parse it
+            $WHL =  Parse-Hosts -hosts $WHL
 
             # Add hosts to array
             $hosts += $WHL
@@ -67,6 +59,9 @@
         {
            # Read it
            $LHL = (Get-Content $host_file) | Where {$_}
+
+           # Parse it
+           $LHL = Parse-Hosts -hosts $LHL
 
            # Add non-wildcard hosts to  array
            $hosts += $LHL
@@ -95,6 +90,16 @@ Function Parse-Hosts
 
     # Remove www prefixes
     $hosts        = $hosts -replace '^(www)([0-9]{0,3})?(\.)'
+
+    # Test for a filter list
+    $filter_list  = $hosts | Select-String "((?<=^\|\|)([A-Z0-9-_.]+)(?=\^([$]third-party)?$))" -AllMatches
+
+    # If we are processing a filter list
+    if($filter_list)
+    {
+        # Only capture compatible hosts
+        $hosts = $filter_list | % {$_.Matches.Value}
+    }
 
     # Only select 'valid' URLs
     $hosts        = $hosts | Select-String '(?sim)(localhost)' -NotMatch `

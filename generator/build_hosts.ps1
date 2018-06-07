@@ -12,10 +12,11 @@ $hosts = @()
 
 $parent_dir       = Split-Path $PSScriptRoot
 
-$web_host_sources = "$PSScriptRoot\includes\config\host_sources.txt"
+$web_sources      = "$PSScriptRoot\includes\config\web_sources.txt"
 
-$local_host_dir   = "$PSScriptRoot\includes\hosts"
-$local_host_files = "$PSScriptRoot\includes\config\blacklist.txt"
+$host_down_dir    = "$PSScriptRoot\includes\hosts"
+
+$local_blacklists = "$PSScriptRoot\includes\config\blacklist.txt"
 $local_wildcards  = "$PSScriptRoot\includes\config\wildcards.txt"
 $local_regex      = "$PSScriptRoot\includes\config\regex.txt"
 $local_whitelist  = "$PSScriptRoot\includes\config\whitelist.txt"
@@ -29,14 +30,15 @@ $out_file         = "$parent_dir\hosts"
 $check_heartbeat  = $false
 
 # Fetch Hosts
+# Each host file will be parsed individually to accommodate for non-standard lists.
 
 Write-Output "--> Fetching Hosts"
 
-$web_host_files   = Get-Content $web_host_sources | Where {$_}
+$web_host_files   = Get-Content $web_sources | Where {$_}
 
-$hosts            = Fetch-Hosts -w_host_files $web_host_files `
-                                -l_host_files $local_host_files `
-                                -dir $local_host_dir
+
+$hosts            = Fetch-Hosts -w_host_files $web_host_files -l_host_files $local_blacklists `
+                                -dir $host_down_dir
 
 # Quit in the event of no hosts detected
 
@@ -56,12 +58,6 @@ $wildcards         = (Get-Content $local_wildcards) | Where {$_}
 # Fetch Whitelist
 
 $whitelist         = (Get-Content $local_whitelist) | Where {$_}
-
-# Parse host file(s)
-
-Write-Output '--> Parsing host files'
-
-$hosts             = Parse-Hosts -hosts $hosts
 
 # Output host count prior to removals
 
