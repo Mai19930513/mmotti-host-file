@@ -80,7 +80,7 @@ Function Parse-Hosts
     )
 
      # First, test for a filter list
-    $filter_list  = $hosts | Select-String "((?<=^\|\|)([A-Z0-9-_.]+)(?=\^([$]third-party)?$))" -AllMatches
+    $filter_list  = $hosts | Select-String "(?sim)((?<=^\|\|)([A-Z0-9-_.]+)(?=\^([$]third-party)?$))" -AllMatches
 
     # If we are processing a filter list
     if($filter_list)
