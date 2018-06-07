@@ -15,11 +15,11 @@
     # Otherwise create a fresh directory
     if(Test-Path $dir)
     {
-        Remove-Item "$dir\*" -Recurse
+        Remove-Item "$dir\*" -Recurse | Out-Null
     }
     else
     {
-        New-Item -ItemType Directory -Path $dir
+        New-Item -ItemType Directory -Path $dir | Out-Null
     }
 
     # Set Iterator
@@ -43,13 +43,13 @@
             $WHL =  Parse-Hosts -hosts $WHL
 
             # Add hosts to array
-            $hosts += $WHL
+            $hosts += $WHL           
             
             $i++
         }
 
         # Purge downloaded hosts
-        Remove-Item "$dir" -Recurse
+        Remove-Item "$dir" -Recurse | Out-Null
     }
 
     # LOCAL
@@ -79,6 +79,16 @@ Function Parse-Hosts
         $hosts
     )
 
+     # First, test for a filter list
+    $filter_list  = $hosts | Select-String "((?<=^\|\|)([A-Z0-9-_.]+)(?=\^([$]third-party)?$))" -AllMatches
+
+    # If we are processing a filter list
+    if($filter_list)
+    {
+        # Only capture compatible hosts
+        $hosts = $filter_list | % {$_.Matches.Value}
+    }
+    
     # Remove local end-zone
     $hosts        = $hosts -replace '127.0.0.1'`
                            -replace '0.0.0.0'
@@ -90,16 +100,6 @@ Function Parse-Hosts
 
     # Remove www prefixes
     $hosts        = $hosts -replace '^(www)([0-9]{0,3})?(\.)'
-
-    # Test for a filter list
-    $filter_list  = $hosts | Select-String "((?<=^\|\|)([A-Z0-9-_.]+)(?=\^([$]third-party)?$))" -AllMatches
-
-    # If we are processing a filter list
-    if($filter_list)
-    {
-        # Only capture compatible hosts
-        $hosts = $filter_list | % {$_.Matches.Value}
-    }
 
     # Only select 'valid' URLs
     $hosts        = $hosts | Select-String '(?sim)(localhost)' -NotMatch `
