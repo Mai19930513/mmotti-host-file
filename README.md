@@ -12,7 +12,7 @@ This host file has been created specifically for use with Samsung Knox Firewall.
 * ZeuS Tracker (https://zeustracker.abuse.ch/blocklist.php?download=domainblocklist)
 * Disconnect Tracking (https://s3.amazonaws.com/lists.disconnect.me/simple_tracking.txt)
 * Disconnect Ads (https://s3.amazonaws.com/lists.disconnect.me/simple_ad.txt)
-* AdGuard Mobile Ads (filterhttps://filters.adtidy.org/extension/chromium/filters/11.txt)
+* AdGuard Mobile Ads (https://filters.adtidy.org/extension/chromium/filters/11.txt)
 
 #### Blacklist recommendations
 These domains are annoyances that cannot be included in the main host-file due to issues that may arise as a result of blocking them.
