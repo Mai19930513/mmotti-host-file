@@ -80,7 +80,7 @@ Function Parse-Hosts
     )
 
      # First, test for a filter list
-    $filter_list  = $hosts | Select-String "(?sim)((?<=^\|\|)([A-Z0-9-_.]+)(?=\^([$]third-party)?$))" -AllMatches
+    $filter_list  = $hosts | Select-String "(?i)((?<=^\|\|)([A-Z0-9-_.]+)(?=\^([$]third-party)?$))" -AllMatches
 
     # If we are processing a filter list
     if($filter_list)
@@ -102,8 +102,8 @@ Function Parse-Hosts
     $hosts        = $hosts -replace '^(www)([0-9]{0,3})?(\.)'
 
     # Only select 'valid' URLs
-    $hosts        = $hosts | Select-String '(?sim)(localhost)' -NotMatch `
-                           | Select-String '(?sim)(?=^.{4,253}$)(^((?!-)[a-z0-9-]{1,63}(?<!-)\.)+[a-z]{2,63}$)|^([\*])([A-Z0-9-_.]+)$|^([A-Z0-9-_.]+)([\*])$|^([\*])([A-Z0-9-_.]+)([\*])$' -AllMatches
+    $hosts        = $hosts | Select-String '(?i)(localhost)' -NotMatch `
+                           | Select-String '(?i)(?=^.{4,253}$)(^((?!-)[a-z0-9-]{1,63}(?<!-)\.)+[a-z]{2,63}$)|^([\*])([A-Z0-9-_.]+)$|^([A-Z0-9-_.]+)([\*])$|^([\*])([A-Z0-9-_.]+)([\*])$' -AllMatches
 
     # Remove empty lines 
     $hosts        = $hosts | Select-String '(^\s*$)' -NotMatch
@@ -199,7 +199,7 @@ Function Regex-Remove
     foreach($regex in $local_regex)
     {
         # Single line, multi line, case insensitive
-        $regex = "(?sim)$regex"
+        $regex = "(?i)$regex"
         
         # Select hosts that do not match regex
         $hosts = $hosts | Select-String $regex -NotMatch
