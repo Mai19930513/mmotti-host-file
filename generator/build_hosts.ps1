@@ -12,15 +12,15 @@ $hosts = @()
 
 $parent_dir       = Split-Path $PSScriptRoot
 
-$web_sources      = "$PSScriptRoot\includes\config\web_sources.txt"
+$web_sources      = "$PSScriptRoot\includes\config\user_settings\web_sources.txt"
 
 $host_down_dir    = "$PSScriptRoot\includes\hosts"
 
-$local_blacklists = "$PSScriptRoot\includes\config\blacklist.txt"
-$local_wildcards  = "$PSScriptRoot\includes\config\wildcards.txt"
-$local_regex      = "$PSScriptRoot\includes\config\regex.txt"
-$local_whitelist  = "$PSScriptRoot\includes\config\whitelist.txt"
-$local_nxhosts    = "$PSScriptRoot\includes\config\nxdomains.txt"
+$local_blacklists = "$PSScriptRoot\includes\config\\user_settings\blacklist.txt"
+$local_wildcards  = "$PSScriptRoot\includes\config\\user_settings\wildcards.txt"
+$local_regex      = "$PSScriptRoot\includes\config\generated_settings\regex.txt"
+$local_whitelist  = "$PSScriptRoot\includes\config\\user_settings\whitelist.txt"
+$local_nxhosts    = "$PSScriptRoot\includes\config\generated_settings\nxdomains.txt"
 
 $out_file         = "$parent_dir\hosts"
 
