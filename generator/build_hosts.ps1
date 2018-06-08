@@ -79,7 +79,7 @@ Write-Output "--> Running regex removals"
 
 $hosts             = Regex-Remove -local_regex $regex_removals -hosts $hosts
 
-Write-Output "--> Hosts Detected: $($hosts.count)"
+Write-Output "--> Post-regex hosts detected: $($hosts.count)"
 
 # If check heartbeats is enabled
 

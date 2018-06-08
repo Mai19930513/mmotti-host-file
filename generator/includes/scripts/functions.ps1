@@ -19,7 +19,17 @@
     }
     else
     {
-        New-Item -ItemType Directory -Path $dir | Out-Null
+        try
+        {
+            New-Item -ItemType Directory -Path $dir | Out-Null
+        }
+        catch
+        {
+            Write-Error "Unable to create host download directory. Web hosts unavailable."
+            
+            $w_host_files = $null
+        }
+           
     }
 
     # Set Iterator
@@ -33,8 +43,17 @@
             # Define host file name
             $dwn_host = "$dir\$i.txt"
             
-            # Download the host file
-            (New-Object System.Net.Webclient).DownloadFile($host_file, $dwn_host)
+            try
+            {
+                # Download the host file
+                (New-Object System.Net.Webclient).DownloadFile($host_file, $dwn_host)
+            }
+            catch
+            {
+                Write-Error "Unable to download: $host_file"
+                # Jump to next host
+                continue
+            }
 
             # Read it
             $WHL = (Get-Content $dwn_host) | Where {$_}
