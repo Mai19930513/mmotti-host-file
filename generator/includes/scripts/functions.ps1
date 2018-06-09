@@ -26,7 +26,7 @@
         catch
         {
             Write-Error "Unable to create host download directory. Web hosts unavailable."
-            
+                      
             $w_host_files = $null
         }
            
