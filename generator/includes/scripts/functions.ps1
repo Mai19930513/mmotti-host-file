@@ -363,7 +363,7 @@ Function Remove-Host-Clutter
     foreach($reverse in $reversed_hosts)
     {    
         # If this is the first host to process, or the reversed string is not like the previous
-        if((!$current_host) -or ($reverse -notlike "$current_host*"))
+        if((!$current_host) -or ($reverse -notlike "$current_host.*"))
         {
             # Add the re-reversed host to the array
             $re_reversed_hosts += Reverse-String -string $reverse
