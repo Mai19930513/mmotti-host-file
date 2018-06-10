@@ -1,6 +1,5 @@
 adservice.google.co.uk
 bongacams.com
-cdn.ampproject.org
 cdn.doubleverify.com
 connect.facebook.net
 consent.truste.com
