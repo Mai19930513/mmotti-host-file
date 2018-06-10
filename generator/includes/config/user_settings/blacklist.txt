@@ -1,5 +1,6 @@
 adservice.google.co.uk
 bongacams.com
+cdn.ampproject.org
 cdn.doubleverify.com
 connect.facebook.net
 consent.truste.com
@@ -13,6 +14,7 @@ googletagservices.com
 liveinternet.ru
 lotame.com
 networkadvertising.org
+p.imgur.com
 platform.tumblr.com
 reactads.engine.adglare.net
 realtime.services.disqus.com

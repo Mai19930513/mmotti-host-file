@@ -176,11 +176,34 @@ Function Update-Regex-Removals
 
         foreach($wildcard in $wildcards)
         {
+            # Fetch the correct regex replace criteria
+            # Mainly for formatting
+
+            Switch -Regex ($wildcard)
+            {
+                '(?i)^((\*)([A-Z0-9-_.]+))$'
+                {
+                    $replace_pattern = "^(([*])([A-Z0-9-_.]+))$", '(*)($3)'
+                }
+                '(?i)^((\*)([A-Z0-9-_.]+)(\*))$'
+                {
+                    $replace_pattern = "^(([*])([A-Z0-9-_.]+)([*]))$", '(*)($3)(*)'
+                }
+                '(?i)^(([A-Z0-9-_.]+)(\*))$'
+                {
+                    $replace_pattern = "^(([A-Z0-9-_.]+)([*]))$", '($2)(*)'
+                }
+
+                default
+                {
+                    continue
+                }
+            }
             
-            $wildcard          = $wildcard -replace "\.", "{DOT}" `
-                                           -replace "\*", "(.*)" `
-                                           -replace "{DOT}", "\." `
-                                           -replace "^((\(\.\*\))?([A-Z0-9-_.\\]+)(\(\.\*\))?)$", '$2($3)$4'
+                
+            $wildcard          = $wildcard -replace $replace_pattern `
+                                           -replace "\.", "\." `
+                                           -replace "\*", ".*"
 
             $wildcard_prefix   = "^("
             $wildcard_suffix   = ")$"

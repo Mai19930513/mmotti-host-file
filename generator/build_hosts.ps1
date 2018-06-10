@@ -49,11 +49,11 @@ if(!($hosts))
     exit
 }
 
-# Fetch Wildcards
+# Fetch valid wildcards
 
 Write-Output "--> Fetching wildcards"
 
-$wildcards         = (Get-Content $local_wildcards) | Where {$_ -match "\*"}
+$wildcards         = (Get-Content $local_wildcards) | Where {$_ -match "^((\*)([A-Z0-9-_.]+))$|^((\*)([A-Z0-9-_.]+)(\*))$|^(([A-Z0-9-_.]+)(\*))$"}
 
 # Fetch Whitelist
 
