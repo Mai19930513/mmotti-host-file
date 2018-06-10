@@ -53,7 +53,7 @@ if(!($hosts))
 
 Write-Output "--> Fetching wildcards"
 
-$wildcards         = (Get-Content $local_wildcards) | Where {$_}
+$wildcards         = (Get-Content $local_wildcards) | Where {$_ -match "\*"}
 
 # Fetch Whitelist
 

@@ -1,4 +1,5 @@
 adservice.google.co.uk
+bongacams.com
 cdn.doubleverify.com
 connect.facebook.net
 consent.truste.com
@@ -9,8 +10,12 @@ fff.dailymail.co.uk
 go.redirectingat.com
 googletagmanager.com
 googletagservices.com
+liveinternet.ru
 lotame.com
 networkadvertising.org
+platform.tumblr.com
+reactads.engine.adglare.net
+realtime.services.disqus.com
 reports.crashlytics.com
 rta.dailymail.co.uk
 settings.crashlytics.com
@@ -19,3 +24,4 @@ t.dailymail.co.uk
 ted.dailymail.co.uk
 ugdturner.com
 w.usabilla.com
+wct.link

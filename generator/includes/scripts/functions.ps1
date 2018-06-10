@@ -176,9 +176,11 @@ Function Update-Regex-Removals
 
         foreach($wildcard in $wildcards)
         {
-        
-            $wildcard          = $wildcard -replace '^(\*\.)(.*)', '(.*)(\.$2)' `
-                                           -replace '(.*)(\.\*)$', '($1\.)(.*)'
+            
+            $wildcard          = $wildcard -replace "\.", "{DOT}" `
+                                           -replace "\*", "(.*)" `
+                                           -replace "{DOT}", "\." `
+                                           -replace "^((\(\.\*\))?([A-Z0-9-_.\\]+)(\(\.\*\))?)$", '$2($3)$4'
 
             $wildcard_prefix   = "^("
             $wildcard_suffix   = ")$"
