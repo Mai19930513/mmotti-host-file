@@ -93,6 +93,14 @@ if($check_heartbeat)
 
 }
 
+# Remove un-necessary hosts
+
+Write-Output "--> Removing host clutter"
+
+$hosts         = Remove-Host-Clutter -hosts $hosts
+
+Write-Output "--> Decluttered count: $($hosts.Count)"
+
 # Fetch NXHOSTS before finalising
 
 $nxhosts       = (Get-Content $local_nxhosts) | Where {$_}

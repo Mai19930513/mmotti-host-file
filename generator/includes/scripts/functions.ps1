@@ -321,6 +321,61 @@ Function Check-Heartbeat
     [System.IO.File]::WriteAllText($out_file,$nx_hosts)
 }
 
+Function Reverse-String
+{
+    Param
+    (
+        [Parameter(Mandatory=$true)]
+        $string
+    )
+
+    # Convert to Char Array
+    $string = $string.toCharArray()
+        
+    # Reverse the characters
+    [Array]::Reverse($string)
+
+    # Join the characters back together
+    -join $string 
+}
+
+Function Remove-Host-Clutter
+{
+    Param
+    (
+        [Parameter(Mandatory=$true)]
+        $hosts
+    )
+
+    # Create empty arrays to store the hosts
+    $reversed_hosts    = @()
+    $re_reversed_hosts = @()
+
+
+    # Reverse the hosts and sort to clump them together
+    $reversed_hosts    += $hosts | ForEach-Object {Reverse-String -string $_} `
+                                 | Sort-Object
+
+    # Set the current host to null
+    $current_host      = $null
+
+    # Foreach reversed host
+    foreach($reverse in $reversed_hosts)
+    {    
+        # If this is the first host to process, or the reversed string is not like the previous
+        if((!$current_host) -or ($reverse -notlike "$current_host*"))
+        {
+            # Add the re-reversed host to the array
+            $re_reversed_hosts += Reverse-String -string $reverse
+            # Set the current host to this host
+            $current_host = $reverse
+        }
+    }
+
+    return $re_reversed_hosts
+
+}
+
 Function Finalise-Hosts
 {
     Param
