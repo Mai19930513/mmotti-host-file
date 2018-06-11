@@ -159,5 +159,6 @@
 ^((track\.)(.*))$
 ^((tracker\.)(.*))$
 ^((tracking\.)(.*))$
+^(cdn\.ampproject\.org)$
 ^(phonearena\.com)$
 ^(s\.youtube\.com)$

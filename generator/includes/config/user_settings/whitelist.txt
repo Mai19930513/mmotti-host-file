@@ -1,2 +1,3 @@
-s.youtube.com
+cdn.ampproject.org
 phonearena.com
+s.youtube.com
