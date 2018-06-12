@@ -135,6 +135,68 @@ Function Parse-Hosts
    
 }
 
+Function Process-Wildcard-Regex
+{
+    Param
+    (
+        [Parameter(Mandatory=$true)]
+        $wildcard
+    )
+
+    # Define replacement pattern for each valid wildcard match
+    Switch -Regex ($wildcard)
+            {
+                '(?i)^((\*)([A-Z0-9-_.]+))$'
+                {
+                    $replace_pattern = "^(([*])([A-Z0-9-_.]+))$", '(*)($3)'
+                }
+                '(?i)^((\*)([A-Z0-9-_.]+)(\*))$'
+                {
+                    $replace_pattern = "^(([*])([A-Z0-9-_.]+)([*]))$", '(*)($3)(*)'
+                }
+                '(?i)^(([A-Z0-9-_.]+)(\*))$'
+                {
+                    $replace_pattern = "^(([A-Z0-9-_.]+)([*]))$", '($2)(*)'
+                }
+                # No regex match
+                Default
+                {
+                    # Output error and exit function
+                    Write-Error "$wildcard is not a valid wildcard."
+                    return
+                }
+            }
+      
+    
+    $wildcard -replace $replace_pattern `
+              -replace "\.", "\." `
+              -replace "\*", ".*" 
+                  
+}
+
+Function Remove-Conflicting-Wildcards
+{
+    Param
+    (
+        [Parameter(Mandatory=$true)]
+        $wildcards,
+        [Parameter(Mandatory=$true)]
+        $whitelist
+    )
+
+    
+    $wildcards | foreach {
+                            # Get the regexed version of the wildcard
+                            $regex_wildcard = Process-Wildcard-Regex -wildcard $_
+
+                            # If it doesn't match against any item(s) in the whitelist, output it
+                            if(!($whitelist -match $regex_wildcard))
+                            {
+                                $_
+                            }
+                          }
+}
+
 Function Update-Regex-Removals
 {
 
@@ -156,13 +218,19 @@ Function Update-Regex-Removals
         # For each one, format it as regex and add to the array
         foreach($wl_host in $whitelist)
         {
-        
-            $wl_host          = $wl_host -replace "\.", "\."
+            # if the whitelisted item is a wildcard
+            if($wl_host -match "\*")
+            {
+                # Fetch the correct regex replace criteria
+                # Mainly for formatting
+                $wl_host = Process-Wildcard-Regex -wildcard $wl_host
 
-            $wl_host_prefix   = "^("
-            $wl_host_suffix   = ")$"
-
-            $wl_host          = $wl_host_prefix + $wl_host + $wl_host_suffix
+            }
+            # Otherwise, process as a standard domain
+            else
+            {
+                $wl_host          = $wl_host -replace "\.", "\."
+            }
 
             $updated_regex_arr += $wl_host
         
@@ -173,46 +241,23 @@ Function Update-Regex-Removals
     if($wildcards)
     {
         # For each one, format it as regex and add to the array
-
         foreach($wildcard in $wildcards)
         {
             # Fetch the correct regex replace criteria
             # Mainly for formatting
+            $wildcard = Process-Wildcard-Regex -wildcard $wildcard
 
-            Switch -Regex ($wildcard)
+            # Skip if there is a match with a whitelist item
+            # or the whitelisted item will be inaccessible
+            if($whitelist -match $wildcard)
             {
-                '(?i)^((\*)([A-Z0-9-_.]+))$'
-                {
-                    $replace_pattern = "^(([*])([A-Z0-9-_.]+))$", '(*)($3)'
-                }
-                '(?i)^((\*)([A-Z0-9-_.]+)(\*))$'
-                {
-                    $replace_pattern = "^(([*])([A-Z0-9-_.]+)([*]))$", '(*)($3)(*)'
-                }
-                '(?i)^(([A-Z0-9-_.]+)(\*))$'
-                {
-                    $replace_pattern = "^(([A-Z0-9-_.]+)([*]))$", '($2)(*)'
-                }
-
-                default
-                {
-                    continue
-                }
+                continue
             }
-            
-                
-            $wildcard          = $wildcard -replace $replace_pattern `
-                                           -replace "\.", "\." `
-                                           -replace "\*", ".*"
-
-            $wildcard_prefix   = "^("
-            $wildcard_suffix   = ")$"
-
-            $wildcard          = $wildcard_prefix + $wildcard + $wildcard_suffix
 
             $updated_regex_arr += $wildcard
         
         }
+
     }
 
     # If the regex removal array has been populated, we need to output it
@@ -229,6 +274,7 @@ Function Update-Regex-Removals
 
 }
 
+
 Function Regex-Remove
 {
     Param
@@ -243,7 +289,7 @@ Function Regex-Remove
     foreach($regex in $local_regex)
     {
         # Single line, multi line, case insensitive
-        $regex = "(?i)$regex"
+        $regex = "(?i)^($regex)$"
         
         # Select hosts that do not match regex
         $hosts = $hosts | Select-String $regex -NotMatch

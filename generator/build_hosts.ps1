@@ -16,10 +16,9 @@ $web_sources      = "$PSScriptRoot\includes\config\user_settings\web_sources.txt
 
 $host_down_dir    = "$PSScriptRoot\includes\hosts"
 
-$local_blacklists = "$PSScriptRoot\includes\config\\user_settings\blacklist.txt"
-$local_wildcards  = "$PSScriptRoot\includes\config\\user_settings\wildcards.txt"
+$local_blacklists = "$PSScriptRoot\includes\config\user_settings\blacklist.txt"
 $local_regex      = "$PSScriptRoot\includes\config\generated_settings\regex.txt"
-$local_whitelist  = "$PSScriptRoot\includes\config\\user_settings\whitelist.txt"
+$local_whitelist  = "$PSScriptRoot\includes\config\user_settings\whitelist.txt"
 $local_nxhosts    = "$PSScriptRoot\includes\config\generated_settings\nxdomains.txt"
 
 $out_file         = "$parent_dir\hosts"
@@ -49,15 +48,20 @@ if(!($hosts))
     exit
 }
 
-# Fetch valid wildcards
-
-Write-Output "--> Fetching wildcards"
-
-$wildcards         = (Get-Content $local_wildcards) | Where {$_ -match "^((\*)([A-Z0-9-_.]+))$|^((\*)([A-Z0-9-_.]+)(\*))$|^(([A-Z0-9-_.]+)(\*))$"}
-
 # Fetch Whitelist
 
 $whitelist         = (Get-Content $local_whitelist) | Where {$_}
+
+# Fetch valid wildcards that aren't in the whitelist
+
+Write-Output "--> Fetching wildcards"
+
+$wildcards         = (Get-Content $local_blacklists) | Where {$_ -match "^((\*)([A-Z0-9-_.]+))$|^((\*)([A-Z0-9-_.]+)(\*))$|^(([A-Z0-9-_.]+)(\*))$"} `
+                                                     | Where {$whitelist -notcontains $_}
+
+# Check for conflicting wildcards
+
+$wildcards         = Remove-Conflicting-Wildcards -wildcards $wildcards -whitelist $whitelist
 
 # Output host count prior to removals
 
