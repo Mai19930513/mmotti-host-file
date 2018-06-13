@@ -320,6 +320,9 @@ Function Check-Heartbeat
         $out_file
     )
         
+    # Remove duplicates before processing
+    $hosts        = $hosts | Sort-Object -Unique
+    
     # Create empty array for NX hosts
     $nx_hosts     = @()
 

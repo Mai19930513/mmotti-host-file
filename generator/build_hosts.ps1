@@ -85,6 +85,12 @@ $hosts             = Regex-Remove -local_regex $regex_removals -hosts $hosts
 
 Write-Output "--> Post-regex hosts detected: $($hosts.count)"
 
+# Remove un-necessary hosts
+
+Write-Output "--> Removing host clutter"
+
+$hosts         = Remove-Host-Clutter -hosts $hosts
+
 # If check heartbeats is enabled
 
 if($check_heartbeat)
@@ -96,12 +102,6 @@ if($check_heartbeat)
     Check-Heartbeat -hosts $hosts -out_file $local_nxhosts
 
 }
-
-# Remove un-necessary hosts
-
-Write-Output "--> Removing host clutter"
-
-$hosts         = Remove-Host-Clutter -hosts $hosts
 
 # Fetch NXHOSTS before finalising
 
