@@ -42,6 +42,9 @@
         {
             # Define host file name
             $dwn_host = "$dir\$i.txt"
+
+            # Status update
+            Write-Host "--> $host_file"
             
             try
             {
@@ -131,7 +134,7 @@ Function Parse-Hosts
         # Only select 'valid' URLs
         $hosts          = $hosts | Select-String '(?i)(localhost)' -NotMatch `
                                  | % {$_.Line} `
-                                 | Select-String "(?i)$domain_regex|$wildcard_regex" -AllMatches`
+                                 | Select-String "(?i)$domain_regex|$wildcard_regex" -AllMatches `
                                  | % {$_.Matches.Value}
     }
 
