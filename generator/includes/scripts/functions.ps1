@@ -98,37 +98,46 @@ Function Parse-Hosts
         $hosts
     )
 
-     # First, test for a filter list
-    $filter_list  = $hosts | Select-String "(?i)(?=.{4,253}\\^)((?<=^[|]{2})(((?!-)[a-z0-9-]{1,63}(?<!-)\\.)+[a-z]{2,63})(?=\\^([$]third-party)?$))" -AllMatches
+    # Define regex for matching hosts
+    $domain_regex   = "(?=^.{4,253}$)(^((?!-)[a-z0-9-]{1,63}(?<!-)\.)+[a-z]{2,63}$)"
+    $wildcard_regex = "^([\*])([A-Z0-9-_.]+)$|^([A-Z0-9-_.]+)([\*])$|^([\*])([A-Z0-9-_.]+)([\*])$"
+    $filter_regex   = "(?=.{4,253}\^)((?<=^[|]{2})(((?!-)[a-z0-9-]{1,63}(?<!-)\.)+[a-z]{2,63})(?=\^([$]third-party)?$))"
+ 
+    # Remove local end-zone
+    $hosts          = $hosts -replace '127.0.0.1'`
+                             -replace '0.0.0.0'
+    # Remove whitespace
+    $hosts          = $hosts.Trim()
+
+    # Remove user comments
+    $hosts          = $hosts -replace '(#.*)|((\s)+#.*)'
+
+    # Remove blank lines
+    $hosts          = $hosts | Where {$_}
+
+    # Try to match a filter list
+    $filter_list    = $hosts | Select-String "(?i)$filter_regex" -AllMatches `
+                             | % {$_.Matches.Value}
 
     # If we are processing a filter list
     if($filter_list)
     {
         # Only capture compatible hosts
-        $hosts = $filter_list | % {$_.Matches.Value}
+        $hosts = $filter_list
     }
+    # Otherwise, process as a normal host file
+    else
+    {
+        # Only select 'valid' URLs
+        $hosts          = $hosts | Select-String '(?i)(localhost)' -NotMatch `
+                                 | % {$_.Line} `
+                                 | Select-String "(?i)$domain_regex|$wildcard_regex" -AllMatches`
+                                 | % {$_.Matches.Value}
+    }
+
     
-    # Remove local end-zone
-    $hosts        = $hosts -replace '127.0.0.1'`
-                           -replace '0.0.0.0'
-    # Remove whitespace
-    $hosts        = $hosts -replace '\s'
-
-    # Remove user comments
-    $hosts        = $hosts -replace '(#.*)|((\s)+#.*)'
-
     # Remove www prefixes
-    $hosts        = $hosts -replace '^(www)([0-9]{0,3})?(\.)'
-
-    # Only select 'valid' URLs
-    $hosts        = $hosts | Select-String '(?i)(localhost)' -NotMatch `
-                           | Select-String '(?i)(?=^.{4,253}$)(^((?!-)[a-z0-9-]{1,63}(?<!-)\.)+[a-z]{2,63}$)|^([\*])([A-Z0-9-_.]+)$|^([A-Z0-9-_.]+)([\*])$|^([\*])([A-Z0-9-_.]+)([\*])$' -AllMatches
-
-    # Remove empty lines 
-    $hosts        = $hosts | Select-String '(^\s*$)' -NotMatch
-
-    # Remove MatchInfo before selecting unique hosts
-    $hosts        = $hosts -replace ''
+    $hosts          = $hosts -replace '^(www)([0-9]{0,3})?(\.)'
     
     # Remove duplicates and force lower case
     ($hosts).toLower() | Sort-Object -Unique
@@ -292,14 +301,10 @@ Function Regex-Remove
         $regex = "(?i)^($regex)$"
         
         # Select hosts that do not match regex
-        $hosts = $hosts | Select-String $regex -NotMatch
+        $hosts = $hosts -notmatch $regex
     }
 
-    # Remove MatchInfo after regex removals
-    $hosts = $hosts -replace ''
-
     return $hosts
-
 }
 
 Function Check-Heartbeat
