@@ -99,7 +99,7 @@ Function Parse-Hosts
     )
 
      # First, test for a filter list
-    $filter_list  = $hosts | Select-String "(?i)((?<=^\|\|)([A-Z0-9-_.]+)(?=\^([$]third-party)?$))" -AllMatches
+    $filter_list  = $hosts | Select-String "(?i)(?=.{4,253}\\^)((?<=^[|]{2})(((?!-)[a-z0-9-]{1,63}(?<!-)\\.)+[a-z]{2,63})(?=\\^([$]third-party)?$))" -AllMatches
 
     # If we are processing a filter list
     if($filter_list)
