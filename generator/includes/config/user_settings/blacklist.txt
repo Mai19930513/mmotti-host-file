@@ -57,8 +57,8 @@
 *geovisite.com
 *glam.com
 *glpals.com
-*google-analytics.com
 *googleadservices.com
+*google-analytics.com
 *googlezip.net
 *groovinads.com
 *hitbox.com
@@ -153,13 +153,18 @@ connect.facebook.net
 consent.truste.com
 counter.*
 data.cnn.com
+delivery.vidible.tv
 device-metrics-us.amazon.com
 events.redditmedia.com
 fff.dailymail.co.uk
+freegeoip.net
 gcirm.*
 go.redirectingat.com
 googletagmanager.com
 googletagservices.com
+hello.myfonts.net
+id.google.com
+js-agent.newrelic.com
 liveinternet.ru
 lotame.com
 networkadvertising.org
@@ -176,6 +181,7 @@ recs.richrelevance.com
 reklam.*
 reports.crashlytics.com
 rta.dailymail.co.uk
+s.dpmsrv.com
 scrooge.*
 settings.crashlytics.com
 ssl.google-analytics.com
