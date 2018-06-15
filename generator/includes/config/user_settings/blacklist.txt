@@ -157,6 +157,7 @@ delivery.vidible.tv
 device-metrics-us.amazon.com
 events.redditmedia.com
 fff.dailymail.co.uk
+fls-eu.amazon.com
 freegeoip.net
 gcirm.*
 go.redirectingat.com
