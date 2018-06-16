@@ -16,7 +16,6 @@ This host file has been created specifically for use with Samsung Knox Firewall.
 * https://s3.amazonaws.com/lists.disconnect.me/simple_malvertising.txt
 * https://s3.amazonaws.com/lists.disconnect.me/simple_malware.txt
 * https://s3.amazonaws.com/lists.disconnect.me/simple_tracking.txt
-* https://s3.amazonaws.com/lists.disconnect.me/simple_tracking.txt
 * https://zeustracker.abuse.ch/blocklist.php?download=domainblocklist
 
 #### Blacklist recommendations
