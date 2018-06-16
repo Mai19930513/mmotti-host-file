@@ -34,13 +34,13 @@
         }
            
     }
-
-    # Set Iterator
-    $i = 1
     
     # WEB
     if($w_host_files)
-    {    
+    {
+        # Set Iterator
+        $i = 1
+
         foreach($host_file in $w_host_files)
         {
             # Define host file name
