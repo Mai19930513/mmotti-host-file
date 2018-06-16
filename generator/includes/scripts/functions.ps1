@@ -11,6 +11,9 @@
     # SSL Support
     [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
     
+    # Create empty hosts array
+    $hosts = @()
+
     # If the host download directory exists, clear it out.
     # Otherwise create a fresh directory
     if(Test-Path $dir)
@@ -44,7 +47,7 @@
             $dwn_host = "$dir\$i.txt"
 
             # Status update
-            Write-Host "--> $host_file"
+            Write-Host "--> W: $host_file"
             
             try
             {
@@ -65,7 +68,7 @@
             $WHL =  Parse-Hosts -hosts $WHL
 
             # Add hosts to array
-            $hosts += $WHL           
+            $hosts += $WHL        
             
             $i++
         }
@@ -79,6 +82,9 @@
     {
         foreach($host_file in $l_host_files)
         {
+           # Status update
+           Write-Host "--> L: $host_file"
+           
            # Read it
            $LHL = (Get-Content $host_file) | Where {$_}
 
@@ -403,11 +409,10 @@ Function Remove-Host-Clutter
         [Parameter(Mandatory=$true)]
         $hosts
     )
-
-    # Create empty arrays to store the hosts
+    
+   
+    # Create empty array to store the reversed hosts
     $reversed_hosts    = @()
-    $re_reversed_hosts = @()
-
 
     # Reverse the hosts and sort to clump them together
     $reversed_hosts    += $hosts | ForEach-Object {Reverse-String -string $_} `
@@ -422,15 +427,15 @@ Function Remove-Host-Clutter
         # If this is the first host to process, or the reversed string is not like the previous
         if((!$current_host) -or ($reverse -notlike "$current_host.*"))
         {
-            # Add the re-reversed host to the array
-            $re_reversed_hosts += Reverse-String -string $reverse
+            # Output the reversed host
+            Reverse-String -string $reverse
             # Set the current host to this host
             $current_host = $reverse
         }
+
+        # Skip to the next
     }
-
-    return $re_reversed_hosts
-
+    
 }
 
 Function Finalise-Hosts

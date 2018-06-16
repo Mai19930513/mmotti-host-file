@@ -48,6 +48,10 @@ if(!($hosts))
     exit
 }
 
+# Output host count prior to removals
+
+Write-Output "--> Valid hosts detected: $($hosts.count)"
+
 # Fetch Whitelist
 
 $whitelist         = (Get-Content $local_whitelist) | Where {$_}
@@ -62,10 +66,6 @@ $wildcards         = (Get-Content $local_blacklists) | Where {$_ -match "^((\*)(
 # Check for conflicting wildcards
 
 $wildcards         = Remove-Conflicting-Wildcards -wildcards $wildcards -whitelist $whitelist
-
-# Output host count prior to removals
-
-Write-Output "--> Valid hosts detected: $($hosts.count)"
 
 # Update Regex Removals
 
