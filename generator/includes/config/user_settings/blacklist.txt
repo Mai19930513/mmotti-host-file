@@ -142,11 +142,14 @@ aff.*
 affiliate.*
 affiliates.*
 analytics.*
+api.cloudmobi.net
+api.segment.io
 assets.adobedtm.com
 banner.*
 banners.*
 bongacams.com
 cdn.doubleverify.com
+cdn-settings.segment.com
 click.*
 clicks.*
 connect.facebook.net
@@ -168,6 +171,7 @@ id.google.com
 js-agent.newrelic.com
 liveinternet.ru
 lotame.com
+network.bazaarvoice.com
 networkadvertising.org
 oas.*
 oascentral.*
