@@ -1,4 +1,3 @@
-
 http://someonewhocares.org/hosts/hosts
 https://filters.adtidy.org/extension/chromium/filters/11.txt
 https://pgl.yoyo.org/adservers/serverlist.php?hostformat=hosts&showintro=0
