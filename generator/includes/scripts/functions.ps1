@@ -12,19 +12,23 @@
     [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
     
     # Create empty hosts array
-    $hosts = @()
+    $hosts    = @()
+
+    # Regex for the downloaded host files
+    $hf_regex = "^((host_)(\d{16})(\.txt))$"
 
     # If the host download directory exists, clear it out.
     # Otherwise create a fresh directory
     if(Test-Path $dir)
     {
-        Remove-Item "$dir\*" -Recurse | Out-Null
+        Get-ChildItem $dir | Where {$_.Name -match $hf_regex} | Remove-Item | Out-Null
     }
     else
     {
         try
         {
             New-Item -ItemType Directory -Path $dir | Out-Null
+            $host_dir_created = $true
         }
         catch
         {
@@ -38,13 +42,13 @@
     # WEB
     if($w_host_files)
     {
-        # Set Iterator
-        $i = 1
-
         foreach($host_file in $w_host_files)
         {
+            # Define timestamp
+            $hf_stamp = Get-Date -Format ddMMyyHHmmssffff
+            
             # Define host file name
-            $dwn_host = "$dir\$i.txt"
+            $dwn_host = "$dir\host_$hf_stamp.txt"
 
             # Status update
             Write-Host "--> W: $host_file"
@@ -68,13 +72,19 @@
             $WHL =  Parse-Hosts -hosts $WHL
 
             # Add hosts to array
-            $hosts += $WHL        
-            
-            $i++
+            $hosts += $WHL
         }
 
-        # Purge downloaded hosts
-        Remove-Item "$dir" -Recurse | Out-Null
+        # If we had to create a directory, Remove it.
+        if($host_dir_created)
+        {
+            Remove-Item $dir -Recurse | Out-Null
+        }
+        # Else, just purge the hosts
+        else
+        {
+            Get-ChildItem $dir | Where {$_.Name -match $hf_regex} | Remove-Item | Out-Null
+        }
     }
 
     # LOCAL
