@@ -1,12 +1,11 @@
-## Hand-crafted host file for use with Samsung Knox Firewall
+## MMotti Host File (Samsung Knox Firewall)
+### Now serving as the default host provider for Adhell3
 
 The aim of this host file has been to keep the amount of hosts as small as possible. Bigger isn't always better, especially with the effective use of wildcards and pruning of dead hosts.
 
-**New**: **2500+** useless dead domains removed.
+**https://raw.githubusercontent.com/mmotti/mmotti-host-file/master/hosts**
 
-#### https://raw.githubusercontent.com/mmotti/mmotti-host-file/master/hosts
-
-This host file has been created specifically for use with Samsung Knox Firewall. It is based on the following sources:
+This host file has been created specifically for use with Samsung Knox Firewall; It is based on the following sources:
 
 * http://someonewhocares.org/hosts/hosts
 * https://filters.adtidy.org/extension/chromium/filters/11.txt
