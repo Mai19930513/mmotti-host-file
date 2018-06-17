@@ -28,7 +28,7 @@ $out_file         = "$parent_dir\hosts"
 
 $check_heartbeat  = $false
 
-# Fetch Hosts
+# Fetch Hosts (Excluding wildcards)
 # Each host file will be parsed individually to accommodate for non-standard lists.
 
 Write-Output "--> Fetching Hosts"
@@ -37,6 +37,7 @@ $web_host_files   = Get-Content $web_sources | Where {$_}
 
 
 $hosts            = Fetch-Hosts -w_host_files $web_host_files -l_host_files $local_blacklists -dir $host_down_dir `
+                                | Where {$_ -notmatch "\*"} `
                                 | Sort-Object -Unique
 
 # Quit in the event of no hosts detected
