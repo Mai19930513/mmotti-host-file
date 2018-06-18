@@ -109,6 +109,23 @@
     return $hosts
 }
 
+Function Extract-Filter-Domains
+{
+    Param
+    (
+       [Parameter(Mandatory=$true)]
+       $hosts 
+    )
+
+    # Regex to match domains within a filter list
+    $filter_regex   = "(?=.{4,253}\^)((?<=^[|]{2})(((?!-)[a-z0-9-]{1,63}(?<!-)\.)+[a-z]{2,63})(?=\^([$]third-party)?$))"
+
+    # Output valid domains
+    $hosts | Select-String "(?i)$filter_regex" -AllMatches `
+           | % {$_.Matches.Value}
+
+}
+
 Function Parse-Hosts
 {
     Param
@@ -120,7 +137,6 @@ Function Parse-Hosts
     # Define regex for matching hosts
     $domain_regex   = "(?=^.{4,253}$)(^((?!-)[a-z0-9-]{1,63}(?<!-)\.)+[a-z]{2,63}$)"
     $wildcard_regex = "^([\*])([A-Z0-9-_.]+)$|^([A-Z0-9-_.]+)([\*])$|^([\*])([A-Z0-9-_.]+)([\*])$"
-    $filter_regex   = "(?=.{4,253}\^)((?<=^[|]{2})(((?!-)[a-z0-9-]{1,63}(?<!-)\.)+[a-z]{2,63})(?=\^([$]third-party)?$))"
  
     # Remove local end-zone
     $hosts          = $hosts -replace '127.0.0.1'`
@@ -135,8 +151,7 @@ Function Parse-Hosts
     $hosts          = $hosts | Where {$_}
 
     # Try to match a filter list
-    $filter_list    = $hosts | Select-String "(?i)$filter_regex" -AllMatches `
-                             | % {$_.Matches.Value}
+    $filter_list    = Extract-Filter-Domains $hosts
 
     # If we are processing a filter list
     if($filter_list)
