@@ -176,15 +176,15 @@ Function Process-Wildcard-Regex
             {
                 '(?i)^((\*)([A-Z0-9-_.]+))$'
                 {
-                    $replace_pattern = "^(([*])([A-Z0-9-_.]+))$", '(*)($3)'
+                    $replace_pattern = "^(([*])([A-Z0-9-_.]+))$", '($3)$'
                 }
                 '(?i)^((\*)([A-Z0-9-_.]+)(\*))$'
                 {
-                    $replace_pattern = "^(([*])([A-Z0-9-_.]+)([*]))$", '(*)($3)(*)'
+                    $replace_pattern = "^(([*])([A-Z0-9-_.]+)([*]))$", '($3)'
                 }
                 '(?i)^(([A-Z0-9-_.]+)(\*))$'
                 {
-                    $replace_pattern = "^(([A-Z0-9-_.]+)([*]))$", '($2)(*)'
+                    $replace_pattern = "^(([A-Z0-9-_.]+)([*]))$", '^($2)'
                 }
                 # No regex match
                 Default
@@ -260,7 +260,7 @@ Function Update-Regex-Removals
                 $wl_host          = $wl_host -replace "\.", "\."
             }
 
-            $updated_regex_arr += $wl_host
+            $updated_regex_arr += "^($wl_host)$"
         
         }
     }
@@ -317,7 +317,7 @@ Function Regex-Remove
     foreach($regex in $local_regex)
     {
         # Single line, multi line, case insensitive
-        $regex = "(?i)^($regex)$"
+        $regex = "(?i)$regex"
         
         # Select hosts that do not match regex
         $hosts = $hosts -notmatch $regex
