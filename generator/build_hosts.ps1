@@ -90,7 +90,7 @@ Write-Output "--> Post-regex hosts detected: $($hosts.count)"
 
 Write-Output "--> Removing host clutter"
 
-$hosts         = Remove-Host-Clutter -hosts $hosts
+$hosts         = Remove-Host-Clutter $hosts
 
 # If check heartbeats is enabled
 

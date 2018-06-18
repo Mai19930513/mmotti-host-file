@@ -69,7 +69,7 @@
             $WHL = (Get-Content $dwn_host) | Where {$_}
 
             # Parse it
-            $WHL =  Parse-Hosts -hosts $WHL
+            $WHL =  Parse-Hosts $WHL
 
             # Add hosts to array
             $hosts += $WHL
@@ -99,7 +99,7 @@
            $LHL = (Get-Content $host_file) | Where {$_}
 
            # Parse it
-           $LHL = Parse-Hosts -hosts $LHL
+           $LHL = Parse-Hosts $LHL
 
            # Add non-wildcard hosts to  array
            $hosts += $LHL
@@ -230,7 +230,7 @@ Function Remove-Conflicting-Wildcards
     
     $wildcards | foreach {
                             # Get the regexed version of the wildcard
-                            $regex_wildcard = Process-Wildcard-Regex -wildcard $_
+                            $regex_wildcard = Process-Wildcard-Regex  $_
 
                             # If it doesn't match against any item(s) in the whitelist, output it
                             if(!($whitelist -match $regex_wildcard))
@@ -266,7 +266,7 @@ Function Update-Regex-Removals
             {
                 # Fetch the correct regex replace criteria
                 # Mainly for formatting
-                $wl_host = Process-Wildcard-Regex -wildcard $wl_host
+                $wl_host = Process-Wildcard-Regex $wl_host
 
             }
             # Otherwise, process as a standard domain
@@ -288,7 +288,7 @@ Function Update-Regex-Removals
         {
             # Fetch the correct regex replace criteria
             # Mainly for formatting
-            $wildcard = Process-Wildcard-Regex -wildcard $wildcard
+            $wildcard = Process-Wildcard-Regex $wildcard
 
             # Skip if there is a match with a whitelist item
             # or the whitelisted item will be inaccessible
@@ -453,7 +453,7 @@ Function Remove-Host-Clutter
         if((!$current_host) -or ($reverse -notlike "$current_host.*"))
         {
             # Output the reversed host
-            Reverse-String -string $reverse
+            Reverse-String $reverse
             # Set the current host to this host
             $current_host = $reverse
         }
