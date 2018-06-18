@@ -126,6 +126,25 @@ Function Extract-Filter-Domains
 
 }
 
+Function Extract-Domains
+{
+    Param
+    (
+       [Parameter(Mandatory=$true)]
+       $hosts
+    )
+
+    # Regex to match standard / wildcard domains
+    $domain_regex   = "(?=^.{4,253}$)(^((?!-)[a-z0-9-]{1,63}(?<!-)\.)+[a-z]{2,63}$)"
+    $wildcard_regex = "^([\*])([A-Z0-9-_.]+)$|^([A-Z0-9-_.]+)([\*])$|^([\*])([A-Z0-9-_.]+)([\*])$"
+
+    # Output valid domains
+    $hosts | Select-String '(?i)(localhost)' -NotMatch `
+           | % {$_.Line} `
+           | Select-String "(?i)$domain_regex|$wildcard_regex" -AllMatches `
+           | % {$_.Matches.Value}
+}
+
 Function Parse-Hosts
 {
     Param
@@ -133,10 +152,6 @@ Function Parse-Hosts
         [Parameter(Mandatory=$true)]
         $hosts
     )
-
-    # Define regex for matching hosts
-    $domain_regex   = "(?=^.{4,253}$)(^((?!-)[a-z0-9-]{1,63}(?<!-)\.)+[a-z]{2,63}$)"
-    $wildcard_regex = "^([\*])([A-Z0-9-_.]+)$|^([A-Z0-9-_.]+)([\*])$|^([\*])([A-Z0-9-_.]+)([\*])$"
  
     # Remove local end-zone
     $hosts          = $hosts -replace '127.0.0.1'`
@@ -163,12 +178,8 @@ Function Parse-Hosts
     else
     {
         # Only select 'valid' URLs
-        $hosts          = $hosts | Select-String '(?i)(localhost)' -NotMatch `
-                                 | % {$_.Line} `
-                                 | Select-String "(?i)$domain_regex|$wildcard_regex" -AllMatches `
-                                 | % {$_.Matches.Value}
+        $hosts      = Extract-Domains $hosts
     }
-
     
     # Remove www prefixes
     $hosts          = $hosts -replace '^(www)([0-9]{0,3})?(\.)'
