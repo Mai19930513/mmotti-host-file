@@ -117,8 +117,11 @@ Function Extract-Filter-Domains
        $hosts 
     )
 
+    # Set valid type options
+    $filter_type    = "important|third-party|popup|subdocument|websocket"
+       
     # Regex to match domains within a filter list
-    $filter_regex   = "(?=.{4,253}\^)((?<=^[|]{2})(((?!-)[a-z0-9-]{1,63}(?<!-)\.)+[a-z]{2,63})(?=\^([$]third-party)?$))"
+    $filter_regex   = "(?=.{4,253}\^)((?<=^[|]{2})(((?!-)[a-z0-9-]{1,63}(?<!-)\.)+[a-z]{2,63})(?=\^([$]($filter_type))?$))"
 
     # Output valid domains
     $hosts | Select-String "(?i)$filter_regex" -AllMatches `
