@@ -1,5 +1,4 @@
 ## MMotti Host File (Samsung Knox Firewall)
-### Now serving as the default host provider for Adhell3
 
 The aim of this host file has been to keep the amount of hosts as small as possible. Bigger isn't always better, especially with the effective use of wildcards and pruning of dead hosts.
 
@@ -7,15 +6,16 @@ The aim of this host file has been to keep the amount of hosts as small as possi
 
 This host file has been created specifically for use with Samsung Knox Firewall; It is based on the following sources:
 
-* http://someonewhocares.org/hosts/hosts
-* https://filters.adtidy.org/extension/chromium/filters/11.txt
-* https://pgl.yoyo.org/adservers/serverlist.php?hostformat=hosts&showintro=0
-* https://raw.githubusercontent.com/hoshsadiq/adblock-nocoin-list/master/hosts.txt
-* https://s3.amazonaws.com/lists.disconnect.me/simple_ad.txt
-* https://s3.amazonaws.com/lists.disconnect.me/simple_malvertising.txt
-* https://s3.amazonaws.com/lists.disconnect.me/simple_malware.txt
-* https://s3.amazonaws.com/lists.disconnect.me/simple_tracking.txt
-* https://zeustracker.abuse.ch/blocklist.php?download=domainblocklist
+* [Dan Pollock's host file](http://someonewhocares.org/hosts/hosts)
+* [Easy Privacy Filter (domains)](https://easylist.to/easylist/easyprivacy.txt)
+* [Adguard Mobile Filter (domains)](https://filters.adtidy.org/extension/chromium/filters/11.txt)
+* [pgl@yoyo](https://pgl.yoyo.org/adservers/serverlist.php?hostformat=hosts&showintro=0)
+* [NoCoin Filter List](https://raw.githubusercontent.com/hoshsadiq/adblock-nocoin-list/master/hosts.txt)
+* [Disconnect Simple Ad](https://s3.amazonaws.com/lists.disconnect.me/simple_ad.txt)
+* [Disconnect Simple Malvertising](https://s3.amazonaws.com/lists.disconnect.me/simple_malvertising.txt)
+* [Disconnect Simple Malware](https://s3.amazonaws.com/lists.disconnect.me/simple_malware.txt)
+* [Disconnect Simple Tracking](https://s3.amazonaws.com/lists.disconnect.me/simple_tracking.txt)
+* [ZeuS domain blocklist](https://zeustracker.abuse.ch/blocklist.php?download=domainblocklist)
 
 #### Blacklist recommendations
 These domains are annoyances that cannot be included in the main host-file due to issues that may arise as a result of blocking them.

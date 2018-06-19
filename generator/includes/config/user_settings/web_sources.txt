@@ -1,4 +1,5 @@
 http://someonewhocares.org/hosts/hosts
+https://easylist.to/easylist/easyprivacy.txt
 https://filters.adtidy.org/extension/chromium/filters/11.txt
 https://pgl.yoyo.org/adservers/serverlist.php?hostformat=hosts&showintro=0
 https://raw.githubusercontent.com/hoshsadiq/adblock-nocoin-list/master/hosts.txt
