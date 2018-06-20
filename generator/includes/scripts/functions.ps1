@@ -183,13 +183,80 @@ Function Parse-Hosts
         # Only select 'valid' URLs
         $hosts      = Extract-Domains $hosts
     }
-    
-    # Remove www prefixes
-    $hosts          = $hosts -replace '^(www)([0-9]{0,3})?(\.)'
-    
+    <#
+    # Replace www prefixes with wildcards
+    $hosts        = $hosts -replace '^(www)([0-9]{0,3})?(\.)', "*"
+    #>
+      
     # Remove duplicates and force lower case
     ($hosts).toLower() | Sort-Object -Unique
    
+}
+
+Function Identify-Wildcard-Prefixes
+{
+    Param
+    (
+        [Parameter(Mandatory=$true)]
+        $hosts,
+        $whitelist,
+        [Parameter(Mandatory=$true)]
+        [int] $prefix_determination_count
+    )
+
+    # Here we are looking to shrink down the host file
+    # Adhell3 will no longer add a * prefix, so we can't just discard any matching items anymore
+    # Instead, we'll check for repeating instances to work out which domains we could add a * prefix to
+    # This needs to be ran near the start of the script so we have all the new wildcards prior to the regex removal
+
+    # Reverse each string
+    # Sort them again
+    # Set initial variables
+    $hosts | foreach {Reverse-String $_} `
+           | Sort-Object `
+           | foreach {$previous_host=$null; $i=0} {
+                
+                # Re-reverse string
+                $re_reverse = Reverse-String $_
+                # Prepare regex
+                $re_regex   = "($re_reverse)$" -replace "\.", "\."
+
+                # If there's no previous host (first iteration)
+                # Or there is a match against the whitelist       
+                if((!$previous_host) -or ($whitelist -match $re_regex))
+                {
+                    # Set the current host as the previous
+                    $previous_host = $_
+                    # Jump to next iteration
+                    return
+                }
+    
+                # If the current iteration is like our comparison criteria
+                if($_ -like "$previous_host.*")
+                {
+                    # Increment counter
+                    $i++
+                    # Jump to next iteration
+                    return
+                }
+                # Else if we are dealing with a new host
+                else
+                {       
+                    # If there were more than x matches
+                    if($i -ge $prefix_determination_count)
+                    {                
+                        # Output a wildcard
+                        Write-Output "*$(Reverse-String $previous_host)"
+                    }
+           
+                    # Set the previous host as the current
+                    $previous_host = $_
+
+                    # Reset the increment 
+                    $i = 0;       
+                }
+
+           }
 }
 
 Function Process-Wildcard-Regex
@@ -441,42 +508,6 @@ Function Reverse-String
     -join $string 
 }
 
-Function Remove-Host-Clutter
-{
-    Param
-    (
-        [Parameter(Mandatory=$true)]
-        $hosts
-    )
-    
-   
-    # Create empty array to store the reversed hosts
-    $reversed_hosts    = @()
-
-    # Reverse the hosts and sort to clump them together
-    $reversed_hosts    += $hosts | ForEach-Object {Reverse-String -string $_} `
-                                 | Sort-Object
-
-    # Set the current host to null
-    $current_host      = $null
-
-    # Foreach reversed host
-    foreach($reverse in $reversed_hosts)
-    {    
-        # If this is the first host to process, or the reversed string is not like the previous
-        if((!$current_host) -or ($reverse -notlike "$current_host.*"))
-        {
-            # Output the reversed host
-            Reverse-String $reverse
-            # Set the current host to this host
-            $current_host = $reverse
-        }
-
-        # Skip to the next
-    }
-    
-}
-
 Function Finalise-Hosts
 {
     Param
@@ -487,18 +518,21 @@ Function Finalise-Hosts
         $nxhosts
     )
 
-    # If NXDOMAINS have been specified
-    if($nxhosts)
-    {    
-        # Exclude NXDOMAINS
-        $hosts    = $hosts | Where {$nxhosts -notcontains $_}
-    }
-
     # Add wildcards to the array after removals
     $hosts        = $hosts += $wildcards
 
+    # Select Unique hosts
+    $hosts        = $hosts | Sort-Object -Unique
+
+    # If NXDOMAINS have been specified
+    if($nxhosts)
+    {
+        # Exclude NXDOMAINS (accommodate for wildcards too)
+        $hosts    = $hosts | Where {($nxhosts -notcontains $_) -and ($nxhosts -notcontains "*$_")}
+    }
+
     # Remove duplicates and force lower case
-    ($hosts).toLower() | Sort-Object -Unique
+    ($hosts).toLower()
 
 }
 

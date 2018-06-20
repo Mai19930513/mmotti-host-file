@@ -4,9 +4,10 @@
 
 . "$PSScriptRoot\includes\scripts\functions.ps1"
 
-# Reset hosts array
+# Reset arrays
 
-$hosts = @()
+$hosts            = @()
+$wildcards        = @()
 
 # User Variables
 
@@ -49,24 +50,37 @@ if(!($hosts))
     exit
 }
 
-# Output host count prior to removals
-
-Write-Output "--> Valid hosts detected: $($hosts.count)"
-
 # Fetch Whitelist
 
-$whitelist         = (Get-Content $local_whitelist) | Where {$_}
+Write-Output "--> Fetching whitelist"
 
-# Fetch valid wildcards that aren't in the whitelist
+$whitelist        = (Get-Content $local_whitelist) | Where {$_}
 
-Write-Output "--> Fetching wildcards"
+# Fetch wildcards
 
-$wildcards         = (Get-Content $local_blacklists) | Where {$_ -match "^((\*)([A-Z0-9-_.]+))$|^((\*)([A-Z0-9-_.]+)(\*))$|^(([A-Z0-9-_.]+)(\*))$"} `
-                                                     | Where {$whitelist -notcontains $_}
+Write-Output "--> Fetching wildcards from blacklist"
+
+$wildcards       += (Get-Content $local_blacklists) | Where {$_ -match "^((\*)([A-Z0-9-_.]+))$|^((\*)([A-Z0-9-_.]+)(\*))$|^(([A-Z0-9-_.]+)(\*))$"}
+
+# Identify wildcard prefixes
+
+Write-Output "--> Identifying wildcard prefixes"
+
+$wildcards       += Identify-Wildcard-Prefixes -hosts $hosts -whitelist $whitelist -prefix_determination_count 4 `
+                                               | Sort-Object
+
+# Convert WWW to * and add to wildcards
+
+$www_regex        = "^(www)([0-9]{0,3})?(\.)"
+
+$wildcards       += $hosts | Select-String $www_regex -AllMatches `
+                           | foreach {$_ -replace $www_regex, "*" }
 
 # Check for conflicting wildcards
 
-$wildcards         = Remove-Conflicting-Wildcards -wildcards $wildcards -whitelist $whitelist
+Write-Output "--> Checking for conflicting wildcards"
+
+$wildcards        = Remove-Conflicting-Wildcards -wildcards $wildcards -whitelist $whitelist
 
 # Update Regex Removals
 
@@ -76,21 +90,17 @@ Update-Regex-Removals -whitelist $whitelist -wildcards $wildcards -out_file $loc
 
 # Fetch Regex criteria
 
-$regex_removals    = (Get-Content $local_regex) | Where {$_}
+Write-Output "--> Fetching regex criteria"
+
+$regex_removals   = (Get-Content $local_regex) | Where {$_}
 
 # Run regex removals
 
 Write-Output "--> Running regex removals"
 
-$hosts             = Regex-Remove -local_regex $regex_removals -hosts $hosts
+$hosts            = Regex-Remove -local_regex $regex_removals -hosts $hosts
 
 Write-Output "--> Post-regex hosts detected: $($hosts.count)"
-
-# Remove un-necessary hosts
-
-Write-Output "--> Removing host clutter"
-
-$hosts         = Remove-Host-Clutter $hosts
 
 # If check heartbeats is enabled
 
@@ -106,13 +116,15 @@ if($check_heartbeat)
 
 # Fetch NXHOSTS before finalising
 
-$nxhosts       = (Get-Content $local_nxhosts) | Where {$_}
+Write-Output "--> Fetching NXDOMAINS"
+
+$nxhosts          = (Get-Content $local_nxhosts) | Where {$_}
 
 # Finalise the hosts
 
 Write-Output "--> Finalising"
 
-$hosts             = Finalise-Hosts -hosts $hosts -wildcards $wildcards -nxhosts $nxhosts
+$hosts            = Finalise-Hosts -hosts $hosts -wildcards $wildcards -nxhosts $nxhosts
 
 Write-Output "--> Hosts added: $($hosts.count)"
 
