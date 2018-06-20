@@ -480,29 +480,28 @@ Function Remove-WWW
     
     # Rather than simply add the wildcards for removal and
     # have thousands of regex removals, we'll use a function for it
-
     
     # Define the WWW regex
     $www_regex = "^(www)([0-9]{0,3})?(\.)"
 
     # Fetch hosts that match the WWW regex
-    $www_hosts = $hosts -match $www_regex 
+    $www_hosts = $hosts -match $www_regex `
+                        | foreach {$_ -replace $www_regex}
+
+    # Replace the WWW in the hosts array (ready for referencing)
+    $hosts     = $hosts -replace $www_regex
     
     # Select hosts where they match WWW
     # Foreach, remove the www
     # Remove duplicates
     # Select where host contains (-www)something.com
     # Returns hosts that have entries for www.something.com and something.com
-    $www_dupes = $www_hosts | foreach {$_ -replace $www_regex}`
-                            | Sort-Object -Unique `
+    $www_dupes = $www_hosts | Sort-Object -Unique `
                             | Where {$hosts -contains $_}
-
-
 
     # Select hosts where they do not match WWW
     # Exclude duplicates
-    $hosts     = $hosts | Where {$_ -notmatch $www_regex} `
-                        | Where {$www_dupes -notcontains $_}
+    $hosts     = $hosts | Where {$www_dupes -notcontains $_}
 
     # For each duplicate that we found
     # Add the item back into hosts with a prefix
