@@ -219,7 +219,7 @@ Function Identify-Wildcard-Prefixes
                 # Re-reverse string
                 $re_reverse = Reverse-String $_
                 # Prepare regex
-                $re_regex   = "($re_reverse)$" -replace "\.", "\."
+                $re_regex   = "($re_reverse)$" -replace "\.", "\." 
 
                 # If there's no previous host (first iteration)
                 # Or there is a match against the whitelist       
@@ -310,15 +310,16 @@ Function Remove-Conflicting-Wildcards
 
     
     $wildcards | foreach {
-                            # Get the regexed version of the wildcard
-                            $regex_wildcard = Process-Wildcard-Regex  $_
+                    
+                    # Get the regexed version of the wildcard
+                    $regex_wildcard = Process-Wildcard-Regex  $_
 
-                            # If it doesn't match against any item(s) in the whitelist, output it
-                            if(!($whitelist -match $regex_wildcard))
-                            {
-                                $_
-                            }
-                          }
+                    # If it doesn't match against any item(s) in the whitelist, output it
+                    if(!($whitelist -match $regex_wildcard))
+                    {
+                        $_
+                    }
+                 }
 }
 
 Function Update-Regex-Removals
@@ -332,56 +333,36 @@ Function Update-Regex-Removals
         $out_file
     )
 
+    # Removals (whitelisted) items should be added to the regex remove array
+    # Something.com -> Remove exactly Something.com
+    # *Something.com -> Remove anything that ends in Something.com
+    
     # Create array
     $updated_regex_arr = @()
 
-
-    # If there are whitelisted items
-    if($whitelist)
-    {
-        # For each one, format it as regex and add to the array
-        foreach($wl_host in $whitelist)
-        {
-            # if the whitelisted item is a wildcard
-            if($wl_host -match "\*")
-            {
-                # Fetch the correct regex replace criteria
-                # Mainly for formatting
-                $wl_host = Process-Wildcard-Regex $wl_host
-
-            }
-            # Otherwise, process as a standard domain
-            else
-            {
-                $wl_host          = $wl_host -replace "\.", "\."
-            }
-
-            $updated_regex_arr += "^($wl_host)$"
-        
-        }
+    # For each whitelisted domain
+    $whitelist | foreach {
+                    
+                    # If the whitelisted item is a wildcard
+                    if($_ -match "\*")
+                    {
+                        # Fetch the correct regex replace formatting
+                        $updated_regex_arr += Process-Wildcard-Regex $_
+                    }
+                    else
+                    # Otherwise, process as a standard domain
+                    {
+                        $_                  = $_ -replace "\.", "\."
+                        $updated_regex_arr += "^($_)$"
+                    }
     }
 
-    # If there are wildcards passed for removal
-    if($wildcards)
-    {
-        # For each one, format it as regex and add to the array
-        foreach($wildcard in $wildcards)
-        {
-            # Fetch the correct regex replace criteria
-            # Mainly for formatting
-            $wildcard = Process-Wildcard-Regex $wildcard
+    # For each wildcard
+    $wildcards | foreach {
 
-            # Skip if there is a match with a whitelist item
-            # or the whitelisted item will be inaccessible
-            if($whitelist -match $wildcard)
-            {
-                continue
-            }
-
-            $updated_regex_arr += $wildcard
-        
-        }
-
+                    # Fetch the correct regex formatting and add to array
+                    # Wildcards have been checked against whitelist in Remove-Conflicting-Wildcards
+                    $updated_regex_arr += Process-Wildcard-Regex $_
     }
 
     # If the regex removal array has been populated, we need to output it
@@ -397,7 +378,6 @@ Function Update-Regex-Removals
     }
 
 }
-
 
 Function Regex-Remove
 {
@@ -490,6 +470,49 @@ Function Check-Heartbeat
     [System.IO.File]::WriteAllText($out_file,$nx_hosts)
 }
 
+Function Remove-WWW
+{
+    Param
+    (
+        [Parameter(Mandatory=$true)]
+        $hosts
+    )
+    
+    # Rather than simply add the wildcards for removal and
+    # have thousands of regex removals, we'll use a function for it
+
+    
+    # Define the WWW regex
+    $www_regex = "^(www)([0-9]{0,3})?(\.)"
+
+    # Fetch hosts that match the WWW regex
+    $www_hosts = $hosts -match $www_regex 
+    
+    # Select hosts where they match WWW
+    # Foreach, remove the www
+    # Remove duplicates
+    # Select where host contains (-www)something.com
+    # Returns hosts that have entries for www.something.com and something.com
+    $www_dupes = $www_hosts | foreach {$_ -replace $www_regex}`
+                            | Sort-Object -Unique `
+                            | Where {$hosts -contains $_}
+
+
+
+    # Select hosts where they do not match WWW
+    # Exclude duplicates
+    $hosts     = $hosts | Where {$_ -notmatch $www_regex} `
+                        | Where {$www_dupes -notcontains $_}
+
+    # For each duplicate that we found
+    # Add the item back into hosts with a prefix
+    $www_dupes | % {$hosts += "*$_"}
+
+    return $hosts
+
+}
+
+
 Function Reverse-String
 {
     Param
@@ -518,6 +541,9 @@ Function Finalise-Hosts
         $nxhosts
     )
 
+    # Remove the WWW domains and replace with *something.com
+    $hosts        = Remove-WWW $hosts
+    
     # Add wildcards to the array after removals
     $hosts        = $hosts += $wildcards
 

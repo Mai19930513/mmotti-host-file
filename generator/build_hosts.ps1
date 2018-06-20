@@ -41,6 +41,7 @@ $hosts            = Fetch-Hosts -w_host_files $web_host_files -l_host_files $loc
                                 | Where {$_ -notmatch "\*"} `
                                 | Sort-Object -Unique
 
+
 # Quit in the event of no hosts detected
 
 if(!($hosts))
@@ -66,18 +67,13 @@ $wildcards       += (Get-Content $local_blacklists) | Where {$_ -match "^((\*)([
 
 Write-Output "--> Identifying wildcard prefixes"
 
-$wildcards       += Identify-Wildcard-Prefixes -hosts $hosts -whitelist $whitelist -prefix_determination_count 4 `
-                                               | Sort-Object
-
-# Convert WWW to * and add to wildcards
-
-$www_regex        = "^(www)([0-9]{0,3})?(\.)"
-
-$wildcards       += $hosts -match $www_regex | foreach {$_ -replace $www_regex, "*" }
+$wildcards       += Identify-Wildcard-Prefixes -hosts $hosts -whitelist $whitelist -prefix_determination_count 10 `
 
 # Check for conflicting wildcards
 
 Write-Output "--> Checking for conflicting wildcards"
+
+$wildcards        = $wildcards | Sort-Object -Unique
 
 $wildcards        = Remove-Conflicting-Wildcards -wildcards $wildcards -whitelist $whitelist
 
