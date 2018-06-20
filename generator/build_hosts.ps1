@@ -73,8 +73,7 @@ $wildcards       += Identify-Wildcard-Prefixes -hosts $hosts -whitelist $whiteli
 
 $www_regex        = "^(www)([0-9]{0,3})?(\.)"
 
-$wildcards       += $hosts | Select-String $www_regex -AllMatches `
-                           | foreach {$_ -replace $www_regex, "*" }
+$wildcards       += $hosts -match $www_regex | foreach {$_ -replace $www_regex, "*" }
 
 # Check for conflicting wildcards
 
