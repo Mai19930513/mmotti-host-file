@@ -477,38 +477,25 @@ Function Remove-WWW
         [Parameter(Mandatory=$true)]
         $hosts
     )
-    
-    # Rather than simply add the wildcards for removal and
-    # have thousands of regex removals, we'll use a function for it
-    
+   
     # Define the WWW regex
     $www_regex = "^(www)([0-9]{0,3})?(\.)"
 
-    # Fetch hosts that match the WWW regex
-    $www_hosts = $hosts -match $www_regex `
-                        | foreach {$_ -replace $www_regex}
+    # Fetch WWW hosts
+    # Remove the prefix
+    # Create an array and add *something.com to it
+    $hosts | Where {$_ -match $www_regex} `
+           | foreach {$_ -replace $www_regex} `
+           | foreach {$www_arr=@()}{$www_arr += "*$_"}
 
-    # Replace the WWW in the hosts array (ready for referencing)
-    $hosts     = $hosts -replace $www_regex
     
-    # Select hosts where they match WWW
-    # Foreach, remove the www
-    # Remove duplicates
-    # Select where host contains (-www)something.com
-    # Returns hosts that have entries for www.something.com and something.com
-    $www_dupes = $www_hosts | Sort-Object -Unique `
-                            | Where {$hosts -contains $_}
+    # Replace all www prefixes
+    # Remove hosts that are about to be added as wildcards
+    $hosts = $hosts | where {$_ -notmatch $www_regex} `
+                    | where {$www_arr -notcontains "*$_"}
 
-    # Select hosts where they do not match WWW
-    # Exclude duplicates
-    $hosts     = $hosts | Where {$www_dupes -notcontains $_}
-
-    # For each duplicate that we found
-    # Add the item back into hosts with a prefix
-    $www_dupes | % {$hosts += "*$_"}
-
-    return $hosts
-
+    # Add our prefixed (ex WWW) domains back
+    $hosts + $www_arr   
 }
 
 
@@ -553,7 +540,7 @@ Function Finalise-Hosts
     if($nxhosts)
     {
         # Exclude NXDOMAINS (accommodate for wildcards too)
-        $hosts    = $hosts | Where {($nxhosts -notcontains $_) -and ($nxhosts -notcontains "*$_")}
+        $hosts = $hosts | Where {$nxhosts -notcontains $($_ -replace "\*")}
     }
 
     # Remove duplicates and force lower case
