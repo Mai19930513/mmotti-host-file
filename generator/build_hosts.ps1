@@ -67,7 +67,7 @@ $wildcards       += (Get-Content $local_blacklists) | Where {$_ -match "^((\*)([
 
 Write-Output "--> Identifying wildcard prefixes"
 
-$wildcards       += Identify-Wildcard-Prefixes -hosts $hosts -whitelist $whitelist -prefix_determination_count 10 `
+$wildcards       += Identify-Wildcard-Prefixes -hosts $hosts -whitelist $whitelist -prefix_determination_count 10
 
 # Check for conflicting wildcards
 
