@@ -183,13 +183,9 @@ Function Parse-Hosts
         # Only select 'valid' URLs
         $hosts      = Extract-Domains $hosts
     }
-    <#
-    # Replace www prefixes with wildcards
-    $hosts        = $hosts -replace '^(www)([0-9]{0,3})?(\.)', "*"
-    #>
       
     # Remove duplicates and force lower case
-    ($hosts).toLower() | Sort-Object -Unique
+    $hosts.toLower() | Sort-Object -Unique
    
 }
 
@@ -282,6 +278,7 @@ Function Process-Wildcard-Regex
                 {
                     $replace_pattern = "^(([A-Z0-9-_.]+)([*]))$", '^($2)'
                 }
+
                 # No regex match
                 Default
                 {
@@ -294,7 +291,6 @@ Function Process-Wildcard-Regex
     
     $wildcard -replace $replace_pattern `
               -replace "\.", "\." `
-              -replace "\*", ".*" 
                   
 }
 
@@ -369,11 +365,10 @@ Function Update-Regex-Removals
     if($updated_regex_arr)
     {
         # Sort array and remove duplicates
-        $updated_regex_arr = ($updated_regex_arr).ToLower() | Sort-Object -Unique
-   
-        # Output to file
-        $updated_regex_arr = $updated_regex_arr -join "`n"
+        # Join on new line
+        $updated_regex_arr = ($updated_regex_arr.ToLower() | Sort-Object -Unique) -join "`n"
 
+        # Output to file
         [System.IO.File]::WriteAllText($out_file,$updated_regex_arr)
     }
 
@@ -540,12 +535,11 @@ Function Finalise-Hosts
     if($nxhosts)
     {
         # Exclude NXDOMAINS (accommodate for wildcards too)
-        $hosts = $hosts | Where {$nxhosts -notcontains $($_ -replace "\*")}
+        $hosts = $hosts | Where {$nxhosts -notcontains $($_ -replace "^\*" -replace "^\.")}
     }
 
-    # Remove duplicates and force lower case
-    ($hosts).toLower()
-
+    # Return lower case hosts
+    $hosts.toLower()
 }
 
 Function Save-Hosts
@@ -559,14 +553,11 @@ Function Save-Hosts
     )
     
     # Join on the new lines
-
     $hosts     = $hosts -join "`n"
 
     # Add blank line to the end of the host file
-
     $hosts += "`n"
 
     # Output to file
-
     [System.IO.File]::WriteAllText($out_file,$hosts)
 }
