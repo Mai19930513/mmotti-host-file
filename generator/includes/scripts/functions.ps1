@@ -474,13 +474,15 @@ Function Remove-WWW
     )
    
     # Define the WWW regex
-    $www_regex = "^(www)([0-9]{0,3})?(\.)"
+    # Match at least two periods to ensure we are wildcarding properly.
+    $www_regex   = "^www(?:[0-9]{1,3})?(?:\.[^.\s]+){2,}"
+    $www_replace = "^www(?:[0-9]{1,3})?(?:\.)"
 
     # Fetch WWW hosts
     # Remove the prefix
     # Create an array and add *something.com to it
     $hosts | Where {$_ -match $www_regex} `
-           | foreach {$_ -replace $www_regex} `
+           | foreach {$_ -replace $www_replace} `
            | foreach {$www_arr=@()}{$www_arr += "*$_"}
 
     
