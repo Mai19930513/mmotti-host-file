@@ -61,7 +61,7 @@ $whitelist        = (Get-Content $local_whitelist) | Where {$_}
 
 Write-Output "--> Fetching wildcards from blacklist"
 
-$wildcards       += (Get-Content $local_blacklists) | Where {$_ -match "^((\*)([A-Z0-9-_.]+))$|^((\*)([A-Z0-9-_.]+)(\*))$|^(([A-Z0-9-_.]+)(\*))$"}
+$wildcards       += (Get-Content $local_blacklists) | Where {$_ -match "^\*[A-Z0-9-_.]+$|^\*[A-Z0-9-_.]+\*$|^[A-Z0-9-_.]+\*$"}
 
 # Identify wildcard prefixes
 

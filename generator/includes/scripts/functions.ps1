@@ -15,7 +15,7 @@
     $hosts    = @()
 
     # Regex for the downloaded host files
-    $hf_regex = "^((host_)(\d{16})(\.txt))$"
+    $hf_regex = "^host_(?:\d){16}\.txt$"
 
     # If the host download directory exists, clear it out.
     # Otherwise create a fresh directory
@@ -121,7 +121,7 @@ Function Extract-Filter-Domains
     $filter_type    = "important|third-party|popup|subdocument|websocket"
        
     # Regex to match domains within a filter list
-    $filter_regex   = "(?=.{4,253}\^)((?<=^[|]{2})(((?!-)[a-z0-9-]{1,63}(?<!-)\.)+[a-z]{2,63})(?=\^([$]($filter_type))?$))"
+    $filter_regex   = "(?=.{4,253}\^)((?<=^[|]{2})(((?!-)[a-z0-9-]{1,63}(?<!-)\.)+[a-z]{2,63})(?=\^(?:[$](?:$filter_type))?$))"
 
     # Output valid domains
     $hosts | Select-String "(?i)$filter_regex" -AllMatches `
@@ -139,7 +139,7 @@ Function Extract-Domains
 
     # Regex to match standard / wildcard domains
     $domain_regex   = "(?=^.{4,253}$)(^((?!-)[a-z0-9-]{1,63}(?<!-)\.)+[a-z]{2,63}$)"
-    $wildcard_regex = "^([\*])([A-Z0-9-_.]+)$|^([A-Z0-9-_.]+)([\*])$|^([\*])([A-Z0-9-_.]+)([\*])$"
+    $wildcard_regex = "^\*([A-Z0-9-_.]+)$|^([A-Z0-9-_.]+)\*$|^\*([A-Z0-9-_.]+)\*$"
 
     # Output valid domains
     $hosts | Select-String '(?i)(localhost)' -NotMatch `
@@ -163,7 +163,7 @@ Function Parse-Hosts
     $hosts          = $hosts.Trim()
 
     # Remove user comments
-    $hosts          = $hosts -replace '(#.*)|((\s)+#.*)'
+    $hosts          = $hosts -replace '^(?:#.*)$|\s+(?:#.*)$'
 
     # Remove blank lines
     $hosts          = $hosts | Where {$_}
@@ -266,17 +266,17 @@ Function Process-Wildcard-Regex
     # Define replacement pattern for each valid wildcard match
     Switch -Regex ($wildcard)
             {
-                '(?i)^((\*)([A-Z0-9-_.]+))$'
+                '(?i)^\*[A-Z0-9-_.]+$'
                 {
-                    $replace_pattern = "^(([*])([A-Z0-9-_.]+))$", '($3)$'
+                    $replace_pattern = "^\*([A-Z0-9-_.]+)$", '$1$'
                 }
-                '(?i)^((\*)([A-Z0-9-_.]+)(\*))$'
+                '(?i)^\*[A-Z0-9-_.]+\*$'
                 {
-                    $replace_pattern = "^(([*])([A-Z0-9-_.]+)([*]))$", '($3)'
+                     $replace_pattern = "^\*([A-Z0-9-_.]+)\*$", '$1'
                 }
-                '(?i)^(([A-Z0-9-_.]+)(\*))$'
+                '(?i)^[A-Z0-9-_.]+\*$'
                 {
-                    $replace_pattern = "^(([A-Z0-9-_.]+)([*]))$", '^($2)'
+                    $replace_pattern ="^([A-Z0-9-_.]+)\*$", '^$1'
                 }
 
                 # No regex match
@@ -289,8 +289,7 @@ Function Process-Wildcard-Regex
             }
       
     
-    $wildcard -replace $replace_pattern `
-              -replace "\.", "\." `
+    $wildcard -replace $replace_pattern -replace "\.", "\."
                   
 }
 
@@ -349,7 +348,7 @@ Function Update-Regex-Removals
                     # Otherwise, process as a standard domain
                     {
                         $_                  = $_ -replace "\.", "\."
-                        $updated_regex_arr += "^($_)$"
+                        $updated_regex_arr += "^$_$"
                     }
     }
 
