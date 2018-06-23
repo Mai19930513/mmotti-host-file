@@ -159,11 +159,12 @@ Function Parse-Hosts
     # Remove local end-zone
     $hosts          = $hosts -replace '127.0.0.1'`
                              -replace '0.0.0.0'
-    # Remove whitespace
-    $hosts          = $hosts.Trim()
 
     # Remove user comments
-    $hosts          = $hosts -replace '^(?:#.*)$|\s+(?:#.*)$'
+    $hosts          = $hosts -replace '\s*(?:#.*)$'
+
+    # Remove whitespace
+    $hosts          = $hosts.Trim()
 
     # Remove blank lines
     $hosts          = $hosts | Where {$_}
