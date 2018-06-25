@@ -12,7 +12,7 @@
     [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
     
     # Create empty hosts array
-    $hosts    = @()
+    $hosts    = New-Object System.Collections.ArrayList
 
     # Regex for the downloaded host files
     $hf_regex = "^host_(?:\d){16}\.txt$"
@@ -68,11 +68,10 @@
             $WHL = (Get-Content $dwn_host) | Where {$_}
 
             # Parse it
-
             $WHL = Parse-Hosts $WHL
 
             # Add hosts to array
-            $hosts += $WHL
+            $WHL | % {[void]$hosts.Add($_)}
         }
 
         # If we had to create a directory, Remove it.
@@ -102,7 +101,7 @@
            $LHL = Parse-Hosts $LHL
 
            # Add non-wildcard hosts to  array
-           $hosts += $LHL
+           $LHL | % {[void]$hosts.Add($_)}
         }
     }    
 
@@ -126,6 +125,9 @@ Function Parse-Hosts
 
     # Remove whitespace
     $hosts          = $hosts.Trim()
+
+    # Remove WWW prefix
+    $hosts          = $hosts -replace "^www(?:[0-9]{1,3})?(?:\.)"
 
     # Remove blank lines
     $hosts          = $hosts | Where {$_}
@@ -151,7 +153,7 @@ Function Extract-Filter-Domains
 
     # Output valid filter domains
     $hosts | Select-String "(?i)$filter_regex" -AllMatches `
-           | % {$_.Matches.Value; "*.$($_.Matches.Value)"}
+           | % {$_.Matches.Value}
 
 }
 
@@ -190,7 +192,7 @@ Function Extract-Wildcards
            | % {$_.Matches.Value}
 }
 
-
+<#
 Function Identify-Wildcard-Prefixes
 {
     Param
@@ -256,6 +258,7 @@ Function Identify-Wildcard-Prefixes
 
            }
 }
+#>
 
 Function Process-Wildcard-Regex
 {
@@ -305,7 +308,7 @@ Function Remove-Conflicting-Wildcards
         $whitelist
     )
   
-    # Create empty arrays
+    # Create empty array
     $wildcard_arr_list = New-Object System.Collections.ArrayList
 
     # Add existing wildcards to the array list
@@ -386,8 +389,6 @@ Function Fetch-Regex-Removals
         # Wildcards have been checked against whitelist in Remove-Conflicting-Wildcards
         Process-Wildcard-Regex $_
     }
-
-   
 }
 
 Function Regex-Remove
@@ -403,7 +404,7 @@ Function Regex-Remove
     # Loop through each regex and select only non-matching items
     foreach($regex in $local_regex)
     {
-        # Multi line, case insensitive
+        # Case insensitive
         $regex = "(?i)$regex"
 
         # Select hosts that do not match regex
@@ -418,6 +419,35 @@ Function Regex-Remove
     return $hosts
 }
 
+Function Remove-Host-Clutter
+{
+    Param
+    (
+        [Parameter(Mandatory=$true)]
+        $hosts
+    )
+    
+    # Reverse each string
+    # Sort them again
+    # Set initial variables
+    $hosts | foreach {Reverse-String $_} `
+           | Sort-Object `
+           | foreach {$previous_host=$null} {
+
+            # If this is the first host to process, or the reversed string is not like the previous
+            if((!$current_host) -or ($_ -notlike "$current_host.*"))
+            {
+                # Output the reversed host
+                Reverse-String $_
+                # Set the current host to this host
+                $current_host = $_
+            }
+
+            # Skip to the next
+
+    } 
+}
+<#
 Function Check-Heartbeat
 {
     Param
@@ -485,6 +515,9 @@ Function Check-Heartbeat
     # Output the file
     [System.IO.File]::WriteAllText($out_file,$nx_hosts)
 }
+#>
+
+<#
 
 Function Remove-WWW
 {
@@ -516,6 +549,7 @@ Function Remove-WWW
     $hosts + $www_arr   
 }
 
+#>
 
 Function Reverse-String
 {
@@ -546,7 +580,7 @@ Function Finalise-Hosts
     )
 
     # Remove the WWW domains and replace with *something.com
-    $hosts        = Remove-WWW $hosts
+    #$hosts        = Remove-WWW $hosts
     
     # Add wildcards to the array after removals
     $hosts        = $hosts + $wildcards
@@ -554,13 +588,22 @@ Function Finalise-Hosts
     # Select Unique hosts
     $hosts        = $hosts | Sort-Object -Unique
 
-    # If NXDOMAINS have been specified
-    if($nxhosts)
-    {
-        # Exclude NXDOMAINS (accommodate for wildcards too)
-        $hosts = $hosts | Where {$nxhosts -notcontains $($_ -replace "^\*" -replace "^\.")}
-    }
+    # Re-create ArrayList from hosts
+    $hosts        | % {$hosts = [System.Collections.ArrayList]@()} {[void]$hosts.add($_)}
+    
+    # For each NXHOST
+    $nxhosts      | % {
+        
+                    # Remove the preceeding * and/or .
+                    $_ = $_ -replace "^\*" -replace "^\."
 
+                    # Remove matches from array
+                    while($hosts.Contains($_))
+                    {
+                        $hosts.Remove($_)
+                    }   
+    }  
+    
     # Return lower case hosts
     $hosts.toLower()
 }
