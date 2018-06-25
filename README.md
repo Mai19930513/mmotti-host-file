@@ -12,7 +12,6 @@ This host file has been created specifically for use with Samsung Knox Firewall;
 * [Disconnect Simple Malvertising](https://s3.amazonaws.com/lists.disconnect.me/simple_malvertising.txt)
 * [Disconnect Simple Malware](https://s3.amazonaws.com/lists.disconnect.me/simple_malware.txt)
 * [Disconnect Simple Tracking](https://s3.amazonaws.com/lists.disconnect.me/simple_tracking.txt)
-* [Easy Privacy Filter (domains)](https://easylist.to/easylist/easyprivacy.txt)
 * [NoCoin Filter List](https://raw.githubusercontent.com/hoshsadiq/adblock-nocoin-list/master/hosts.txt)
 * [ZeuS domain blocklist](https://zeustracker.abuse.ch/blocklist.php?download=domainblocklist)
 * [pgl@yoyo](https://pgl.yoyo.org/adservers/serverlist.php?hostformat=hosts&showintro=0)
