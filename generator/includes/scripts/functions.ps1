@@ -35,15 +35,14 @@
             Write-Error "Unable to create host download directory. Web hosts unavailable."
                       
             $w_host_files = $null
-        }
-           
+        }         
     }
-    
-    # WEB
+
+    # If there are web host files
     if($w_host_files)
     {
-        foreach($host_file in $w_host_files)
-        {
+        # For each one
+        $web_host_files | % {
             # Define timestamp
             $hf_stamp = Get-Date -Format ddMMyyHHmmssffff
             
@@ -51,16 +50,16 @@
             $dwn_host = "$dir\host_$hf_stamp.txt"
 
             # Status update
-            Write-Host "--> W: $host_file"
+            Write-Host "--> W: $_"
             
             try
             {
                 # Download the host file
-                (New-Object System.Net.Webclient).DownloadFile($host_file, $dwn_host)
+                (New-Object System.Net.Webclient).DownloadFile($_, $dwn_host)
             }
             catch
             {
-                Write-Error "Unable to download: $host_file"
+                Write-Error "Unable to download: $_"
                 # Jump to next host
                 continue
             }
@@ -69,7 +68,8 @@
             $WHL = (Get-Content $dwn_host) | Where {$_}
 
             # Parse it
-            $WHL =  Parse-Hosts $WHL
+
+            $WHL = Parse-Hosts $WHL
 
             # Add hosts to array
             $hosts += $WHL
@@ -86,17 +86,17 @@
             Get-ChildItem $dir | Where {$_.Name -match $hf_regex} | Remove-Item | Out-Null
         }
     }
+   
 
-    # LOCAL
+    # If there are local host files (incl. blacklist)
     if($l_host_files)
     {
-        foreach($host_file in $l_host_files)
-        {
+        $l_host_files | % {
            # Status update
-           Write-Host "--> L: $host_file"
+           Write-Host "--> L: $_"
            
            # Read it
-           $LHL = (Get-Content $host_file) | Where {$_}
+           $LHL = (Get-Content $_) | Where {$_}
 
            # Parse it
            $LHL = Parse-Hosts $LHL
@@ -107,45 +107,6 @@
     }    
 
     return $hosts
-}
-
-Function Extract-Filter-Domains
-{
-    Param
-    (
-       [Parameter(Mandatory=$true)]
-       $hosts 
-    )
-
-    # Set valid type options
-    $filter_type    = "important|third-party|popup|subdocument|websocket"
-       
-    # Regex to match domains within a filter list
-    $filter_regex   = "(?=.{4,253}\^)((?<=^[|]{2})(((?!-)[a-z0-9-]{1,63}(?<!-)\.)+[a-z]{2,63})(?=\^(?:[$](?:$filter_type))?$))"
-
-    # Output valid domains
-    $hosts | Select-String "(?i)$filter_regex" -AllMatches `
-           | % {$_.Matches.Value}
-
-}
-
-Function Extract-Domains
-{
-    Param
-    (
-       [Parameter(Mandatory=$true)]
-       $hosts
-    )
-
-    # Regex to match standard / wildcard domains
-    $domain_regex   = "(?=^.{4,253}$)(^((?!-)[a-z0-9-]{1,63}(?<!-)\.)+[a-z]{2,63}$)"
-    $wildcard_regex = "^\*([A-Z0-9-_.]+)$|^([A-Z0-9-_.]+)\*$|^\*([A-Z0-9-_.]+)\*$"
-
-    # Output valid domains
-    $hosts | Select-String '(?i)(localhost)' -NotMatch `
-           | % {$_.Line} `
-           | Select-String "(?i)$domain_regex|$wildcard_regex" -AllMatches `
-           | % {$_.Matches.Value}
 }
 
 Function Parse-Hosts
@@ -168,27 +129,67 @@ Function Parse-Hosts
 
     # Remove blank lines
     $hosts          = $hosts | Where {$_}
-
-    # Try to match a filter list
-    $filter_list    = Extract-Filter-Domains $hosts
-
-    # If we are processing a filter list
-    if($filter_list)
-    {
-        # Only capture compatible hosts
-        $hosts = $filter_list
-    }
-    # Otherwise, process as a normal host file
-    else
-    {
-        # Only select 'valid' URLs
-        $hosts      = Extract-Domains $hosts
-    }
       
-    # Remove duplicates and force lower case
-    $hosts.toLower() | Sort-Object -Unique
+    # Output lower case hosts
+    $hosts.ToLower()
    
 }
+
+Function Extract-Filter-Domains
+{
+    Param
+    (
+       [Parameter(Mandatory=$true)]
+       $hosts 
+    )
+
+    # Set valid type options
+    $filter_type    = "important|third-party|popup|subdocument|websocket"
+       
+    # Regex to match domains within a filter list
+    $filter_regex   = "(?=.{4,253}\^)((?<=^[|]{2})(((?!-)[a-z0-9-]{1,63}(?<!-)\.)+[a-z]{2,63})(?=\^(?:[$](?:$filter_type))?$))"
+
+    # Output valid filter domains
+    $hosts | Select-String "(?i)$filter_regex" -AllMatches `
+           | % {$_.Matches.Value; "*.$($_.Matches.Value)"}
+
+}
+
+Function Extract-Domains
+{
+    Param
+    (
+       [Parameter(Mandatory=$true)]
+       $hosts
+    )
+
+    # Regex to match standard domains
+    $domain_regex   = "(?=^.{4,253}$)(^((?!-)[a-z0-9-]{1,63}(?<!-)\.)+[a-z]{2,63}$)"
+
+    # Output valid domains
+    $hosts | Select-String '(?i)(localhost)' -NotMatch `
+           | % {$_.Line} `
+           | Select-String "(?i)$domain_regex" -AllMatches `
+           | % {$_.Matches.Value}
+}
+
+
+Function Extract-Wildcards
+{
+    Param
+    (
+       [Parameter(Mandatory=$true)]
+       $hosts
+    )
+
+    # Regex to match wildcard domains
+    $wildcard_regex = "^\*([A-Z0-9-_.]+)$|^([A-Z0-9-_.]+)\*$|^\*([A-Z0-9-_.]+)\*$"
+
+    # Output valid domains
+    $hosts | Select-String "(?i)$wildcard_regex" -AllMatches `
+           | % {$_.Matches.Value}
+}
+
 
 Function Identify-Wildcard-Prefixes
 {
@@ -303,75 +304,90 @@ Function Remove-Conflicting-Wildcards
         [Parameter(Mandatory=$true)]
         $whitelist
     )
+  
+    # Create empty arrays
+    $wildcard_arr_list = New-Object System.Collections.ArrayList
 
-    
-    $wildcards | foreach {
-                    
-                    # Get the regexed version of the wildcard
-                    $regex_wildcard = Process-Wildcard-Regex  $_
+    # Add existing wildcards to the array list
+    $wildcards         | % {[void]$wildcard_arr_list.Add($_)}
 
-                    # If it doesn't match against any item(s) in the whitelist, output it
-                    if(!($whitelist -match $regex_wildcard))
-                    {
-                        $_
-                    }
-                 }
+    # For each wildcard
+    $wildcards         | % {
+        
+        # Store the wildcard and regex version of wildcard
+        $wcard       = $_
+        $wcard_regex = Process-Wildcard-Regex $_
+
+        # If the wildcard is whitelisted
+        # Remove it from the array list and iterate
+        if($whitelist -match $wcard_regex)
+        {
+            $wildcard_arr_list.Remove($_)
+            return
+        }
+
+        # If there were more than two matches for a given wildcard
+        # (We found an un-necessary wildcard)
+        if(($wildcards -match $wcard_regex).Count -ge 2)
+        {
+            # Specify our target wildcards for removal
+            # Excluding the wildcard we used to match >= 2 results
+            $target_wcards = $wildcard_arr_list | ? {$_ -notcontains $wcard} `
+                                                | ? {$_ -match $wcard_regex}
+        
+            # For each target wildcard
+            # While each target wildcard is present, remove it.
+            $target_wcards | % {
+                while($wildcard_arr_list.Contains($_))
+                {
+                    $wildcard_arr_list.Remove($_);
+                }
+            }      
+        }
+    }
+
+    return $wildcard_arr_list 
 }
 
-Function Update-Regex-Removals
+Function Fetch-Regex-Removals
 {
 
     Param
     (
         $whitelist,
-        $wildcards,
-        [Parameter(Mandatory=$true)]
-        $out_file
+        $wildcards
     )
 
     # Removals (whitelisted) items should be added to the regex remove array
     # Something.com -> Remove exactly Something.com
     # *Something.com -> Remove anything that ends in Something.com
     
-    # Create array
-    $updated_regex_arr = @()
 
     # For each whitelisted domain
     $whitelist | foreach {
                     
-                    # If the whitelisted item is a wildcard
-                    if($_ -match "\*")
-                    {
-                        # Fetch the correct regex replace formatting
-                        $updated_regex_arr += Process-Wildcard-Regex $_
-                    }
-                    else
-                    # Otherwise, process as a standard domain
-                    {
-                        $_                  = $_ -replace "\.", "\."
-                        $updated_regex_arr += "^$_$"
-                    }
+        # If the whitelisted item is a wildcard
+        if($_ -match "\*")
+        {
+            # Fetch the correct regex replace formatting
+            Process-Wildcard-Regex $_
+        }
+        else
+        # Otherwise, process as a standard domain
+        {
+            $_ = $_ -replace "\.", "\."
+            Write-Output "^$_$"
+        }
     }
 
     # For each wildcard
     $wildcards | foreach {
-
-                    # Fetch the correct regex formatting and add to array
-                    # Wildcards have been checked against whitelist in Remove-Conflicting-Wildcards
-                    $updated_regex_arr += Process-Wildcard-Regex $_
+        # Fetch the correct regex formatting and add to array
+        # Wildcards have been checked against whitelist in Remove-Conflicting-Wildcards
+        Process-Wildcard-Regex $_
     }
 
-    # If the regex removal array has been populated, we need to output it
-    if($updated_regex_arr)
-    {
-        # Sort array and remove duplicates
-        # Join on new line
-        $updated_regex_arr = ($updated_regex_arr.ToLower() | Sort-Object -Unique) -join "`n"
-
-        # Output to file
-        [System.IO.File]::WriteAllText($out_file,$updated_regex_arr)
-    }
-
+   
 }
 
 Function Regex-Remove
@@ -383,15 +399,20 @@ Function Regex-Remove
         [Parameter(Mandatory=$true)]
         $hosts
     )
-
+    
     # Loop through each regex and select only non-matching items
     foreach($regex in $local_regex)
     {
-        # Single line, multi line, case insensitive
+        # Multi line, case insensitive
         $regex = "(?i)$regex"
-        
+
         # Select hosts that do not match regex
-        $hosts = $hosts -notmatch $regex
+        $hosts -match $regex | % {
+            while($hosts.Contains($_))
+            {
+                $hosts.Remove($_)
+            }
+        }
     }
 
     return $hosts
@@ -528,7 +549,7 @@ Function Finalise-Hosts
     $hosts        = Remove-WWW $hosts
     
     # Add wildcards to the array after removals
-    $hosts        = $hosts += $wildcards
+    $hosts        = $hosts + $wildcards
 
     # Select Unique hosts
     $hosts        = $hosts | Sort-Object -Unique

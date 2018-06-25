@@ -6,7 +6,10 @@
 
 # Reset arrays
 
-$hosts            = @()
+$hosts            = New-Object System.Collections.ArrayList
+
+$filter_hosts     = @()
+$collated_hosts   = @()
 $wildcards        = @()
 
 # User Variables
@@ -29,27 +32,15 @@ $out_file         = "$parent_dir\hosts"
 
 $check_heartbeat  = $false
 
-# Fetch Hosts (Excluding wildcards)
-# Each host file will be parsed individually to accommodate for non-standard lists.
 
-Write-Output "--> Fetching Hosts"
+# Collate hosts
+
+Write-Output "--> Fetching hosts"
 
 $web_host_files   = Get-Content $web_sources | Where {$_}
 
+$collated_hosts  += Fetch-Hosts -w_host_files $web_host_files -l_host_files $local_blacklists -dir $host_down_dir
 
-$hosts            = Fetch-Hosts -w_host_files $web_host_files -l_host_files $local_blacklists -dir $host_down_dir `
-                                | Where {$_ -notmatch "\*"} `
-                                | Sort-Object -Unique
-
-
-# Quit in the event of no hosts detected
-
-if(!($hosts))
-{
-    Write-Output "No hosts detected. Please check your configuration."
-    Start-Sleep -Seconds 5
-    exit
-}
 
 # Fetch Whitelist
 
@@ -57,17 +48,60 @@ Write-Output "--> Fetching whitelist"
 
 $whitelist        = (Get-Content $local_whitelist) | Where {$_}
 
-# Fetch wildcards
 
-Write-Output "--> Fetching wildcards from blacklist"
+# Add standard domains to an array
 
-$wildcards       += (Get-Content $local_blacklists) | Where {$_ -match "^\*[A-Z0-9-_.]+$|^\*[A-Z0-9-_.]+\*$|^[A-Z0-9-_.]+\*$"}
+Write-Output "--> Fetching standard domains"
+
+Extract-Domains $collated_hosts | % {if(!$hosts.contains($_)){[void]$hosts.Add($_)}}
+
+
+# Add filter hosts to an array
+
+Write-Output "--> Fetching filter hosts"
+
+$filter_hosts    += Extract-Filter-Domains $collated_hosts
+
+
+# Add standard hosts from filter lists to main array
+
+Write-Output "--> Adding standard hosts from filter lists"
+
+Extract-Domains $filter_hosts | % {if(!$hosts.contains($_)){[void]$hosts.Add($_)}}
+# Add wildcards to an array
+
+Write-Output "--> Fetching wildcards"
+
+$wildcards       += Extract-Wildcards $collated_hosts
+
+
+# Filter list format is something.com, *.something.com, so we need to
+# add the necessary wildcards to accommodate for this
+
+Write-Output "--> Adding necessary wildcards to filter list hosts"
+
+$wildcards       += Extract-Wildcards $filter_hosts
+
+
+# Quit in the event of no valid hosts
+
+if(!$hosts -and !$filter_hosts -and !$wildcards)
+{
+    Write-Output "No hosts detected. Please check your configuration."
+    Start-Sleep -Seconds 5
+    exit
+}
+
+<# This needs the ability to whitelist genuine domains.
+   Probably separate from the standard whitelist
 
 # Identify wildcard prefixes
 
-Write-Output "--> Identifying wildcard prefixes"
+Write-Output "--> Identifying potential wildcard prefixes"
 
-$wildcards       += Identify-Wildcard-Prefixes -hosts $hosts -whitelist $whitelist -prefix_determination_count 10
+$wildcards       += Identify-Wildcard-Prefixes -hosts $hosts -whitelist $whitelist -prefix_determination_count 20
+
+#>
 
 # Check for conflicting wildcards
 
@@ -77,17 +111,13 @@ $wildcards        = $wildcards | Sort-Object -Unique
 
 $wildcards        = Remove-Conflicting-Wildcards -wildcards $wildcards -whitelist $whitelist
 
+
 # Update Regex Removals
-
-Write-Output "--> Updating regex criteria"
-
-Update-Regex-Removals -whitelist $whitelist -wildcards $wildcards -out_file $local_regex
-
-# Fetch Regex criteria
 
 Write-Output "--> Fetching regex criteria"
 
-$regex_removals   = (Get-Content $local_regex) | Where {$_}
+$regex_removals   = Fetch-Regex-Removals -whitelist $whitelist -wildcards $wildcards
+
 
 # Run regex removals
 
@@ -96,6 +126,9 @@ Write-Output "--> Running regex removals"
 $hosts            = Regex-Remove -local_regex $regex_removals -hosts $hosts
 
 Write-Output "--> Post-regex hosts detected: $($hosts.count)"
+
+<#
+    This needs checking after the recent changes
 
 # If check heartbeats is enabled
 
@@ -109,11 +142,15 @@ if($check_heartbeat)
 
 }
 
+#>
+
+
 # Fetch NXHOSTS before finalising
 
 Write-Output "--> Fetching NXDOMAINS"
 
 $nxhosts          = (Get-Content $local_nxhosts) | Where {$_}
+
 
 # Finalise the hosts
 
@@ -122,6 +159,7 @@ Write-Output "--> Finalising"
 $hosts            = Finalise-Hosts -hosts $hosts -wildcards $wildcards -nxhosts $nxhosts
 
 Write-Output "--> Hosts added: $($hosts.count)"
+
 
 # Save host file
 
