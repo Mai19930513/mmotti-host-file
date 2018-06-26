@@ -443,12 +443,12 @@ Function Remove-Host-Clutter
            | foreach {$previous_host=$null} {
 
             # If this is the first host to process, or the reversed string is not like the previous
-            if((!$current_host) -or ($_ -notlike "$current_host.*"))
+            if((!$previous_host) -or ($_ -notlike "$previous_host.*"))
             {
                 # Output the reversed host
                 Reverse-String $_
                 # Set the current host to this host
-                $current_host = $_
+                $previous_host = $_
             }
 
             # Skip to the next
