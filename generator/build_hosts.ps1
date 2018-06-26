@@ -38,7 +38,15 @@ Write-Output "--> Fetching hosts"
 $web_host_files   = Get-Content $web_sources | Where {$_}
 
 $collated_hosts  += Fetch-Hosts -w_host_files $web_host_files -l_host_files $local_blacklists -dir $host_down_dir `
+                    | ? {$_ -notmatch "\*"} `
                     | Sort-Object -Unique
+
+$collated_hosts | % {[void]$hosts.Add($_)}
+
+
+# Status update
+
+Write-Output "--> $($hosts.Count) hosts detected"
 
 
 # Fetch Whitelist
@@ -48,30 +56,11 @@ Write-Output "--> Fetching whitelist"
 $whitelist        = (Get-Content $local_whitelist) | Where {$_}
 
 
-# Add standard domains to an array
-
-Write-Output "--> Fetching standard domains"
-
-Extract-Domains $collated_hosts | % {[void]$hosts.Add($_)}
-
-
-# Add filter hosts to an array
-
-Write-Output "--> Fetching filter hosts"
-
-Extract-Filter-Domains $collated_hosts | % {[void]$hosts.Add($_)}
-
-
-# Status update
-
-Write-Output "--> $($hosts.Count) hosts detected"
-
-
 # Add wildcards to an array
 
 Write-Output "--> Fetching wildcards"
 
-$wildcards       += Extract-Wildcards $collated_hosts
+$wildcards       += Extract-Domains $(Get-Content $local_blacklists) | ? {$_ -match "\*"}
 
 
 # Quit in the event of no valid hosts

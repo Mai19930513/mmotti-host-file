@@ -108,35 +108,6 @@
     return $hosts
 }
 
-Function Parse-Hosts
-{
-    Param
-    (
-        [Parameter(Mandatory=$true)]
-        $hosts
-    )
- 
-    # Remove local end-zone
-    $hosts          = $hosts -replace '127.0.0.1'`
-                             -replace '0.0.0.0'
-
-    # Remove user comments
-    $hosts          = $hosts -replace '\s*(?:#.*)$'
-
-    # Remove whitespace
-    $hosts          = $hosts.Trim()
-
-    # Remove WWW prefix
-    $hosts          = $hosts -replace "^www(?:[0-9]{1,3})?(?:\.)"
-
-    # Remove blank lines
-    $hosts          = $hosts | Where {$_}
-      
-    # Output lower case hosts
-    $hosts.ToLower()
-   
-}
-
 Function Extract-Filter-Domains
 {
     Param
@@ -165,31 +136,54 @@ Function Extract-Domains
        $hosts
     )
 
-    # Regex to match standard domains
+    # Regex to match standard domains and wildcards
     $domain_regex   = "(?=^.{4,253}$)(^((?!-)[a-z0-9-]{1,63}(?<!-)\.)+[a-z]{2,63}$)"
+    $wildcard_regex = "^\*([A-Z0-9-_.]+)$|^([A-Z0-9-_.]+)\*$|^\*([A-Z0-9-_.]+)\*$"
+
 
     # Output valid domains
-    $hosts | Select-String '(?i)(localhost)' -NotMatch `
+    $hosts | Select-String '(?im)(localhost)' -NotMatch `
            | % {$_.Line} `
-           | Select-String "(?i)$domain_regex" -AllMatches `
+           | Select-String "(?im)$domain_regex|$wildcard_regex" -AllMatches `
            | % {$_.Matches.Value}
 }
 
-
-Function Extract-Wildcards
+Function Parse-Hosts
 {
     Param
     (
-       [Parameter(Mandatory=$true)]
-       $hosts
+        [Parameter(Mandatory=$true)]
+        $hosts
     )
+ 
+    # Remove local end-zone
+    $hosts          = $hosts -replace '127.0.0.1'`
+                             -replace '0.0.0.0'
 
-    # Regex to match wildcard domains
-    $wildcard_regex = "^\*([A-Z0-9-_.]+)$|^([A-Z0-9-_.]+)\*$|^\*([A-Z0-9-_.]+)\*$"
+    # Remove user comments
+    $hosts          = $hosts -replace '\s*(?:#.*)$'
 
-    # Output valid domains
-    $hosts | Select-String "(?i)$wildcard_regex" -AllMatches `
-           | % {$_.Matches.Value}
+    # Remove whitespace
+    $hosts          = $hosts.Trim()
+
+    # Check for filter lists
+    $filter_list    = Extract-Filter-Domains $hosts
+
+    if($filter_list)
+    {
+        $hosts = $filter_list
+    }
+    else
+    {
+        $hosts = Extract-Domains $hosts
+    }
+
+    # Remove WWW prefix
+    $hosts          = $hosts -replace "^www(?:[0-9]{1,3})?(?:\.)"
+      
+    # Output lower case hosts
+    $hosts.ToLower() | Where {$_}
+   
 }
 
 <#
