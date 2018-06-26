@@ -28,7 +28,7 @@ $out_file         = "$parent_dir\hosts"
 # Check the domain is still alive?
 # This can take some time depending on host counts.
 
-#$check_heartbeat  = $false
+$check_heartbeat  = $false
 
 
 # Collate hosts
@@ -114,9 +114,6 @@ $hosts            = Remove-Host-Clutter $hosts
 Write-Output "--> $($hosts.Count) hosts remain after de-clutter"
 
 
-<#
-    This needs checking after the recent changes
-
 # If check heartbeats is enabled
 
 if($check_heartbeat)
@@ -128,8 +125,6 @@ if($check_heartbeat)
     Check-Heartbeat -hosts $hosts -out_file $local_nxhosts
 
 }
-
-#>
 
 
 # Fetch NXHOSTS before finalising

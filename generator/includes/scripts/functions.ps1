@@ -455,7 +455,7 @@ Function Remove-Host-Clutter
 
     } 
 }
-<#
+
 Function Check-Heartbeat
 {
     Param
@@ -465,7 +465,7 @@ Function Check-Heartbeat
         [Parameter(Mandatory=$true)]
         $out_file
     )
-        
+
     # Remove duplicates before processing
     $hosts        = $hosts | Sort-Object -Unique
     
@@ -479,16 +479,19 @@ Function Check-Heartbeat
     $i            = 1
     $nx           = 1
 
-    # For each host
-    foreach($nx_check in $hosts)
-    {
+    # Foreach host
+    $hosts | % {
+
+        # Store the domain incase we need it
+        $nx_host = $_
+
         # Output the current progress
         Write-Progress -Activity "Querying Hosts" -status "Query $i of $($hosts.Count)" -percentComplete ($i / $hosts.count*100)
     
         # Try to resolve a DNS name
         try
         {
-            Resolve-DnsName $nx_check -Type A -Server 1.1.1.1 -DnsOnly -QuickTimeout -ErrorAction Stop | Out-Null
+            Resolve-DnsName $_ -Type A -Server 1.1.1.1 -DnsOnly -QuickTimeout -ErrorAction Stop | Out-Null
         }
         # On error
         catch
@@ -500,10 +503,10 @@ Function Check-Heartbeat
             if($err_code -eq $nx_err_code)
             {
                 # Let the user know
-                Write-Output "--> NXDOMAIN (#$nx): $nx_check"
+                Write-Output "--> NXDOMAIN (#$nx): $nx_host"
             
                 # Add to array
-                $nx_hosts += $nx_check
+                $nx_hosts += $nx_host
 
                 # Iterate
                 $nx++
@@ -523,7 +526,6 @@ Function Check-Heartbeat
     # Output the file
     [System.IO.File]::WriteAllText($out_file,$nx_hosts)
 }
-#>
 
 <#
 
