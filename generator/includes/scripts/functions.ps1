@@ -136,15 +136,29 @@ Function Extract-Domains
        $hosts
     )
 
-    # Regex to match standard domains and wildcards
+    # Regex to match standard domains
     $domain_regex   = "(?=^.{4,253}$)(^((?!-)[a-z0-9-]{1,63}(?<!-)\.)+[a-z]{2,63}$)"
-    $wildcard_regex = "^\*([A-Z0-9-_.]+)$|^([A-Z0-9-_.]+)\*$|^\*([A-Z0-9-_.]+)\*$"
-
 
     # Output valid domains
-    $hosts | Select-String '(?im)(localhost)' -NotMatch `
+    $hosts | Select-String '(?i)(localhost)' -NotMatch `
            | % {$_.Line} `
-           | Select-String "(?im)$domain_regex|$wildcard_regex" -AllMatches `
+           | Select-String "(?i)$domain_regex" -AllMatches `
+           | % {$_.Matches.Value}
+}
+
+Function Extract-Wildcards
+{
+    Param
+    (
+       [Parameter(Mandatory=$true)]
+       $hosts
+    )
+
+    # Regex to match wildcards
+    $wildcard_regex = "^\*([A-Z0-9-_.]+)$|^([A-Z0-9-_.]+)\*$|^\*([A-Z0-9-_.]+)\*$"
+
+    # Output valid wildcards
+    $hosts | Select-String "(?i)$wildcard_regex" -AllMatches `
            | % {$_.Matches.Value}
 }
 

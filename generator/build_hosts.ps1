@@ -38,7 +38,6 @@ Write-Output "--> Fetching hosts"
 $web_host_files   = Get-Content $web_sources | Where {$_}
 
 $collated_hosts  += Fetch-Hosts -w_host_files $web_host_files -l_host_files $local_blacklists -dir $host_down_dir `
-                    | ? {$_ -notmatch "\*"} `
                     | Sort-Object -Unique
 
 $collated_hosts | % {[void]$hosts.Add($_)}
@@ -60,7 +59,7 @@ $whitelist        = (Get-Content $local_whitelist) | Where {$_}
 
 Write-Output "--> Fetching wildcards"
 
-$wildcards       += Extract-Domains $(Get-Content $local_blacklists) | ? {$_ -match "\*"}
+$wildcards       += Extract-Wildcards $(Get-Content $local_blacklists)
 
 
 # Quit in the event of no valid hosts
