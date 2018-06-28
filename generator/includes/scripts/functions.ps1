@@ -21,7 +21,7 @@
     # Otherwise create a fresh directory
     if(Test-Path $dir)
     {
-        Get-ChildItem $dir | Where {$_.Name -match $hf_regex} | Remove-Item | Out-Null
+        Get-ChildItem $dir | ? {$_.Name -match $hf_regex} | Remove-Item | Out-Null
     }
     else
     {
@@ -65,7 +65,7 @@
             }
 
             # Read it
-            $WHL = (Get-Content $dwn_host) | Where {$_}
+            $WHL = (Get-Content $dwn_host) | ? {$_}
 
             # Parse it
             $WHL = Parse-Hosts $WHL
@@ -82,7 +82,7 @@
         # Else, just purge the hosts
         else
         {
-            Get-ChildItem $dir | Where {$_.Name -match $hf_regex} | Remove-Item | Out-Null
+            Get-ChildItem $dir | ? {$_.Name -match $hf_regex} | Remove-Item | Out-Null
         }
     }
    
@@ -95,7 +95,7 @@
            Write-Host "--> L: $_"
            
            # Read it
-           $LHL = (Get-Content $_) | Where {$_}
+           $LHL = (Get-Content $_) | ? {$_}
 
            # Parse it
            $LHL = Parse-Hosts $LHL
@@ -196,7 +196,7 @@ Function Parse-Hosts
     $hosts          = $hosts -replace "^www(?:[0-9]{1,3})?(?:\.)"
       
     # Output lower case hosts
-    $hosts.ToLower() | Where {$_}
+    $hosts.ToLower() | ? {$_}
    
 }
 
@@ -220,9 +220,9 @@ Function Identify-Wildcard-Prefixes
     # Reverse each string
     # Sort them again
     # Set initial variables
-    $hosts | foreach {Reverse-String $_} `
-           | Sort-Object `
-           | foreach {$previous_host=$null; $i=0} {
+    $hosts | % {Reverse-String $_} `
+           | sort `
+           | % {$previous_host=$null; $i=0} {
                 
                 # Re-reverse string
                 $re_reverse = Reverse-String $_
@@ -333,8 +333,10 @@ Function Remove-Conflicting-Wildcards
         # Remove it from the array list and iterate
         if($whitelist -match $wcard_regex)
         {
-            $wildcard_arr_list.Remove($_)
-            return
+            while($wildcard_arr_list.Contains($_))
+            {
+                $wildcard_arr_list.Remove($_);
+            }
         }
 
         # If there were more than two matches for a given wildcard
@@ -375,7 +377,7 @@ Function Fetch-Regex-Removals
     
 
     # For each whitelisted domain
-    $whitelist | foreach {
+    $whitelist | % {
                     
         # If the whitelisted item is a wildcard
         if($_ -match "\*")
@@ -392,7 +394,7 @@ Function Fetch-Regex-Removals
     }
 
     # For each wildcard
-    $wildcards | foreach {
+    $wildcards | % {
         # Fetch the correct regex formatting and add to array
         # Wildcards have been checked against whitelist in Remove-Conflicting-Wildcards
         Process-Wildcard-Regex $_
@@ -438,9 +440,9 @@ Function Remove-Host-Clutter
     # Reverse each string
     # Sort them again
     # Set initial variables
-    $hosts | foreach {Reverse-String $_} `
-           | Sort-Object `
-           | foreach {$previous_host=$null} {
+    $hosts | % {Reverse-String $_} `
+           | sort `
+           | % {$previous_host=$null} {
 
             # If this is the first host to process, or the reversed string is not like the previous
             if((!$previous_host) -or ($_ -notlike "$previous_host.*"))
@@ -467,7 +469,7 @@ Function Check-Heartbeat
     )
 
     # Remove duplicates before processing
-    $hosts        = $hosts | Sort-Object -Unique
+    $hosts        = $hosts | sort -Unique
     
     # Create empty array for NX hosts
     $nx_hosts     = @()
@@ -545,15 +547,15 @@ Function Remove-WWW
     # Fetch WWW hosts
     # Remove the prefix
     # Create an array and add *something.com to it
-    $hosts | Where {$_ -match $www_regex} `
-           | foreach {$_ -replace $www_replace} `
-           | foreach {$www_arr=@()}{$www_arr += "*$_"}
+    $hosts | ? {$_ -match $www_regex} `
+           | % {$_ -replace $www_replace} `
+           | % {$www_arr=@()}{$www_arr += "*$_"}
 
     
     # Replace all www prefixes
     # Remove hosts that are about to be added as wildcards
-    $hosts = $hosts | where {$_ -notmatch $www_regex} `
-                    | where {$www_arr -notcontains "*$_"}
+    $hosts = $hosts | ? {$_ -notmatch $www_regex} `
+                    | ? {$www_arr -notcontains "*$_"}
 
     # Add our prefixed (ex WWW) domains back
     $hosts + $www_arr   
@@ -596,7 +598,7 @@ Function Finalise-Hosts
     $hosts        = $hosts + $wildcards
 
     # Select Unique hosts
-    $hosts        = $hosts | Sort-Object -Unique
+    $hosts        = $hosts | sort -Unique
 
     # Re-create ArrayList from hosts
     $hosts        | % {$hosts = [System.Collections.ArrayList]@()} {[void]$hosts.add($_)}

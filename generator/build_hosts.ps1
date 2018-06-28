@@ -7,7 +7,6 @@
 # Reset arrays
 
 $hosts            = New-Object System.Collections.ArrayList
-$collated_hosts   = @()
 $wildcards        = @()
 
 # User Variables
@@ -35,13 +34,11 @@ $check_heartbeat  = $false
 
 Write-Output "--> Fetching hosts"
 
-$web_host_files   = Get-Content $web_sources | Where {$_}
+$web_host_files   = Get-Content $web_sources | ? {$_}
 
-$collated_hosts  += Fetch-Hosts -w_host_files $web_host_files -l_host_files $local_blacklists -dir $host_down_dir `
-                    | Sort-Object -Unique
-
-$collated_hosts | % {[void]$hosts.Add($_)}
-
+Fetch-Hosts -w_host_files $web_host_files -l_host_files $local_blacklists -dir $host_down_dir `
+            | sort -Unique `
+            | % {[void]$hosts.Add($_)}
 
 # Status update
 
@@ -52,7 +49,7 @@ Write-Output "--> $($hosts.Count) hosts detected"
 
 Write-Output "--> Fetching whitelist"
 
-$whitelist        = (Get-Content $local_whitelist) | Where {$_}
+$whitelist        = (Get-Content $local_whitelist) | ? {$_}
 
 
 # Add wildcards to an array
@@ -76,7 +73,7 @@ if(!$hosts -and !$wildcards)
 
 Write-Output "--> Checking wildcards for conflicts"
 
-$wildcards        = $wildcards | Sort-Object -Unique
+$wildcards        = $wildcards | sort -Unique
 
 $wildcards        = Remove-Conflicting-Wildcards -wildcards $wildcards -whitelist $whitelist
 
@@ -131,7 +128,7 @@ if($check_heartbeat)
 
 Write-Output "--> Fetching NXDOMAINS"
 
-$nxhosts          = (Get-Content $local_nxhosts) | Where {$_}
+$nxhosts          = (Get-Content $local_nxhosts) | ? {$_}
 
 
 # Finalise the hosts
