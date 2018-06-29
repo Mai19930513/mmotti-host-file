@@ -517,8 +517,8 @@ Function Check-Heartbeat
     Write-Progress -Completed -Activity "Querying Hosts"
 
     # Close and dispose the StreamWriter
-    $nx_hosts.Close()
-    $nx_hosts.Dispose()
+    $nx_sr.Close()
+    $nx_sr.Dispose()
 }
 
 Function Reverse-String
