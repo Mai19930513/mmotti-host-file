@@ -12,7 +12,7 @@
     [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
     
     # Create empty hosts array
-    $hosts    = New-Object System.Collections.ArrayList
+    $hosts    = [System.Collections.ArrayList]::new()
 
     # Regex for the downloaded host files
     $hf_regex = "^host_(?:\d){16}\.txt$"
@@ -37,73 +37,66 @@
             $w_host_files = $null
         }         
     }
-
-    # If there are web host files
-    if($w_host_files)
-    {
-        # For each one
-        $web_host_files | % {
-            # Define timestamp
-            $hf_stamp = Get-Date -Format ddMMyyHHmmssffff
-            
-            # Define host file name
-            $dwn_host = "$dir\host_$hf_stamp.txt"
-
-            # Status update
-            Write-Host "--> W: $_"
-            
-            try
-            {
-                # Download the host file
-                (New-Object System.Net.Webclient).DownloadFile($_, $dwn_host)
-            }
-            catch
-            {
-                Write-Error "Unable to download: $_"
-                # Jump to next host
-                continue
-            }
-
-            # Read it
-            $WHL = (Get-Content $dwn_host) | ? {$_}
-
-            # Parse it
-            $WHL = Parse-Hosts $WHL
-
-            # Add hosts to array
-            $WHL | % {[void]$hosts.Add($_)}
-        }
-
-        # If we had to create a directory, Remove it.
-        if($host_dir_created)
-        {
-            Remove-Item $dir -Recurse | Out-Null
-        }
-        # Else, just purge the hosts
-        else
-        {
-            Get-ChildItem $dir | ? {$_.Name -match $hf_regex} | Remove-Item | Out-Null
-        }
-    }
    
+    # For each one
+    $web_host_files | % {
+        # Define timestamp
+        $hf_stamp = Get-Date -Format ddMMyyHHmmssffff
+            
+        # Define host file name
+        $dwn_host = "$dir\host_$hf_stamp.txt"
 
-    # If there are local host files (incl. blacklist)
-    if($l_host_files)
-    {
-        $l_host_files | % {
-           # Status update
-           Write-Host "--> L: $_"
-           
-           # Read it
-           $LHL = (Get-Content $_) | ? {$_}
-
-           # Parse it
-           $LHL = Parse-Hosts $LHL
-
-           # Add non-wildcard hosts to  array
-           $LHL | % {[void]$hosts.Add($_)}
+        # Status update
+        Write-Host "--> W: $_"
+            
+        try
+        {
+            # Download the host file
+            (New-Object System.Net.Webclient).DownloadFile($_, $dwn_host)
         }
-    }    
+        catch
+        {
+            Write-Error "Unable to download: $_"
+            # Jump to next host
+            continue
+        }
+
+        # Read it
+        $WHL = (Get-Content $dwn_host) | ? {$_}
+
+        # Parse it
+        $WHL = Parse-Hosts $WHL
+
+        # Add hosts to array
+        $WHL | % {[void]$hosts.Add($_)}
+    }
+
+    # If we had to create a directory, Remove it.
+    if($host_dir_created)
+    {
+        Remove-Item $dir -Recurse | Out-Null
+    }
+    # Else, just purge the hosts
+    else
+    {
+        Get-ChildItem $dir | ? {$_.Name -match $hf_regex} | Remove-Item | Out-Null
+    }
+    
+     
+    $l_host_files | % {
+        # Status update
+        Write-Host "--> L: $_"
+           
+        # Read it
+        $LHL = (Get-Content $_) | ? {$_}
+
+        # Parse it
+        $LHL = Parse-Hosts $LHL
+
+        # Add non-wildcard hosts to  array
+        $LHL | % {[void]$hosts.Add($_)}
+    }
+       
 
     return $hosts
 }
@@ -195,8 +188,8 @@ Function Parse-Hosts
     # Remove WWW prefix
     $hosts          = $hosts -replace "^www(?:[0-9]{1,3})?(?:\.)"
       
-    # Output lower case hosts
-    $hosts.ToLower() | ? {$_}
+    # Output hosts
+    $hosts | ? {$_}
    
 }
 
@@ -316,12 +309,9 @@ Function Remove-Conflicting-Wildcards
         $whitelist
     )
   
-    # Create empty array
-    $wildcard_arr_list = New-Object System.Collections.ArrayList
-
-    # Add existing wildcards to the array list
-    $wildcards         | % {[void]$wildcard_arr_list.Add($_)}
-
+    # Create ArrayList and populate with wildcards
+    $wildcards        | % {$wildcard_arr_list = [System.Collections.ArrayList]::new()} {[void]$wildcard_arr_list.Add($_)}
+   
     # For each wildcard
     $wildcards         | % {
         
@@ -393,17 +383,13 @@ Function Fetch-Regex-Removals
         else
         # Otherwise, process as a standard domain
         {
-            $_ = $_ -replace "\.", "\."
-            Write-Output "^$_$"
+            Write-Output "^$([regex]::Escape($_))$"
         }
     }
 
     # For each wildcard
-    $wildcards | % {
-        # Fetch the correct regex formatting and add to array
-        # Wildcards have been checked against whitelist in Remove-Conflicting-Wildcards
-        Process-Wildcard-Regex $_
-    }
+    # Fetch the correct regex formatting and add to array
+    $wildcards | % {Process-Wildcard-Regex $_}
 }
 
 Function Regex-Remove
@@ -411,13 +397,13 @@ Function Regex-Remove
     Param
     (
         [Parameter(Mandatory=$true)]
-        $local_regex,
+        $regex_removals,
         [Parameter(Mandatory=$true)]
         $hosts
     )
     
     # Loop through each regex and select only non-matching items
-    foreach($regex in $local_regex)
+    foreach($regex in $regex_removals)
     {
         # Case insensitive
         $regex = "(?i)$regex"
@@ -459,7 +445,7 @@ Function Remove-Host-Clutter
             }
 
             # Skip to the next
-
+            return
     } 
 }
 
@@ -472,101 +458,68 @@ Function Check-Heartbeat
         [Parameter(Mandatory=$true)]
         $out_file
     )
-
-    # Remove duplicates before processing
-    $hosts        = $hosts | sort -Unique
     
-    # Create empty array for NX hosts
-    $nx_hosts     = @()
+    # Create a new StreamWriter for the NXDOMAINS
+    $nx_sr           = [System.IO.StreamWriter] $out_file
+    
+    # Set StreamWriter EOL to \n
+    $nx_sr.NewLine   = "`n"
+    # Set to output results immediately
+    $nx_sr.AutoFlush = $true
 
     # NXDOMAIN native error code
-    $nx_err_code  = 9003
+    $nx_err_code     = 9003
 
     # Iterator starting point
-    $i            = 1
-    $nx           = 1
+    $i               = 1
+    $nx              = 1
 
-    # Foreach host
-    $hosts | % {
+    # Foreach unique host
+    $hosts | sort -Unique `
+           | % {
 
-        # Store the domain incase we need it
-        $nx_host = $_
+            # Store the domain incase we need it
+            $nx_host = $_
 
-        # Output the current progress
-        Write-Progress -Activity "Querying Hosts" -status "Query $i of $($hosts.Count)" -percentComplete ($i / $hosts.count*100)
+            # Output the current progress
+            Write-Progress -Activity "Querying Hosts" -status "Query $i of $($hosts.Count)" -percentComplete ($i / $hosts.count*100)
     
-        # Try to resolve a DNS name
-        try
-        {
-            Resolve-DnsName $_ -Type A -Server 1.1.1.1 -DnsOnly -QuickTimeout -ErrorAction Stop | Out-Null
-        }
-        # On error
-        catch
-        {
-            # Store error code
-            $err_code = $Error[0].Exception.NativeErrorCode
-
-            # If error code matches NXDOMAIN error code
-            if($err_code -eq $nx_err_code)
+            # Try to resolve a DNS name
+            try
             {
-                # Let the user know
-                Write-Output "--> NXDOMAIN (#$nx): $nx_host"
-            
-                # Add to array
-                $nx_hosts += $nx_host
-
-                # Iterate
-                $nx++
+                Resolve-DnsName $_ -Type A -Server 1.1.1.1 -DnsOnly -QuickTimeout -ErrorAction Stop | Out-Null
             }
-        }
+            # On error
+            catch
+            {
+                # Store error code
+                $err_code = $Error[0].Exception.NativeErrorCode
+
+                # If error code matches NXDOMAIN error code
+                if($err_code -eq $nx_err_code)
+                {
+                    # Let the user know
+                    Write-Output "--> NXDOMAIN (#$nx): $nx_host"
+            
+                    # Add to array
+                    $nx_sr.WriteLine($nx_host)
+
+                    # Iterate
+                    $nx++
+                }
+            }
     
-        # Iterate
-        $i++
-    }
+            # Iterate
+            $i++
+            }
 
     # Remove progress bar
     Write-Progress -Completed -Activity "Querying Hosts"
 
-    # Join array on a new line
-    $nx_hosts = $nx_hosts -join "`n"
-
-    # Output the file
-    [System.IO.File]::WriteAllText($out_file,$nx_hosts)
+    # Close and dispose the StreamWriter
+    $nx_hosts.Close()
+    $nx_hosts.Dispose()
 }
-
-<#
-
-Function Remove-WWW
-{
-    Param
-    (
-        [Parameter(Mandatory=$true)]
-        $hosts
-    )
-   
-    # Define the WWW regex
-    # Match at least two periods to ensure we are wildcarding properly.
-    $www_regex   = "^www(?:[0-9]{1,3})?(?:\.[^.\s]+){2,}"
-    $www_replace = "^www(?:[0-9]{1,3})?(?:\.)"
-
-    # Fetch WWW hosts
-    # Remove the prefix
-    # Create an array and add *something.com to it
-    $hosts | ? {$_ -match $www_regex} `
-           | % {$_ -replace $www_replace} `
-           | % {$www_arr=@()}{$www_arr += "*$_"}
-
-    
-    # Replace all www prefixes
-    # Remove hosts that are about to be added as wildcards
-    $hosts = $hosts | ? {$_ -notmatch $www_regex} `
-                    | ? {$www_arr -notcontains "*$_"}
-
-    # Add our prefixed (ex WWW) domains back
-    $hosts + $www_arr   
-}
-
-#>
 
 Function Reverse-String
 {
@@ -596,33 +549,24 @@ Function Finalise-Hosts
         $nxhosts
     )
 
-    # Remove the WWW domains and replace with *something.com
-    #$hosts        = Remove-WWW $hosts
+    # Create an ArrayList of hosts
+    $hosts        | % {$hosts = [System.Collections.ArrayList]::new()} {[void]$hosts.Add($_)}
     
-    # Add wildcards to the array after removals
-    $hosts        = $hosts + $wildcards
+    # Add wildcards
+    $wildcards    | % {[void]$hosts.Add($_)}
 
-    # Select Unique hosts
-    $hosts        = $hosts | sort -Unique
-
-    # Re-create ArrayList from hosts
-    $hosts        | % {$hosts = [System.Collections.ArrayList]@()} {[void]$hosts.add($_)}
-    
-    # For each NXHOST
+    # Remove NXDOMAINS
     $nxhosts      | % {
-        
-                    # Remove the preceeding * and/or .
-                    $_ = $_ -replace "^\*" -replace "^\."
-
-                    # Remove matches from array
+                      
                     while($hosts.Contains($_))
                     {
-                        $hosts.Remove($_)
-                    }   
-    }  
+                        $hosts.Remove($_)                    
+                    }
+    }
+
     
-    # Return lower case hosts
-    $hosts.toLower()
+    # Output lowercase hosts
+    $hosts.toLower() | sort -Unique
 }
 
 Function Save-Hosts

@@ -6,8 +6,8 @@
 
 # Reset arrays
 
-$hosts            = New-Object System.Collections.ArrayList
-$wildcards        = @()
+$hosts            = [System.Collections.ArrayList]::new()
+$wildcards        = [System.Collections.ArrayList]::new()
 
 # User Variables
 
@@ -56,7 +56,9 @@ $whitelist        = (Get-Content $local_whitelist) | ? {$_}
 
 Write-Output "--> Fetching wildcards"
 
-$wildcards       += Extract-Wildcards $(Get-Content $local_blacklists)
+Extract-Wildcards $(Get-Content $local_blacklists) `
+                  | sort -Unique `
+                  | % {[void]$wildcards.Add($_)}
 
 
 # Quit in the event of no valid hosts
@@ -72,8 +74,6 @@ if(!$hosts -and !$wildcards)
 # Check for conflicting wildcards
 
 Write-Output "--> Checking wildcards for conflicts"
-
-$wildcards        = $wildcards | sort -Unique
 
 $wildcards        = Remove-Conflicting-Wildcards -wildcards $wildcards -whitelist $whitelist
 
@@ -94,7 +94,7 @@ $regex_removals   = Fetch-Regex-Removals -whitelist $whitelist -wildcards $wildc
 
 Write-Output "--> Running regex removals"
 
-$hosts            = Regex-Remove -local_regex $regex_removals -hosts $hosts
+$hosts            = Regex-Remove -regex_removals $regex_removals -hosts $hosts
 
 Write-Output "--> $($hosts.count) hosts remain after regex removal"
 
