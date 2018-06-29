@@ -337,11 +337,16 @@ Function Remove-Conflicting-Wildcards
             {
                 $wildcard_arr_list.Remove($_);
             }
+
+            return
         }
 
-        # If there were more than two matches for a given wildcard
+        # Count matches of wildcard against existing wildcard list
+        $wcard_match_count = ($wildcard_arr_list -match $wcard_regex).Count
+
+        # If there were two or more matches for a given wildcard
         # (We found an un-necessary wildcard)
-        if(($wildcards -match $wcard_regex).Count -ge 2)
+        if($wcard_match_count -ge 2)
         {
             # Specify our target wildcards for removal
             # Excluding the wildcard we used to match >= 2 results
