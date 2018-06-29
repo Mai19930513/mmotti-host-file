@@ -58,7 +58,7 @@
         {
             Write-Error "Unable to download: $_"
             # Jump to next host
-            continue
+            return
         }
 
         # Read it
