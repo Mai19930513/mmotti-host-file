@@ -610,9 +610,6 @@ Function Finalise-Hosts
     
     # For each NXHOST
     $nxhosts      | % {
-        
-                    # Remove the preceeding * and/or .
-                    $_ = $_ -replace "^\*" -replace "^\."
 
                     # Remove matches from array
                     while($hosts.Contains($_))
