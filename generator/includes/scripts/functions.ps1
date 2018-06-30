@@ -12,10 +12,10 @@
     [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
     
     # Create empty hosts array
-    $hosts    = [System.Collections.ArrayList]::new()
+    $fetched_hosts    = [System.Collections.ArrayList]::new()
 
     # Regex for the downloaded host files
-    $hf_regex = "^host_(?:\d){16}\.txt$"
+    $hf_regex         = "^host_(?:\d){16}\.txt$"
 
     # If the host download directory exists, clear it out.
     # Otherwise create a fresh directory
@@ -68,7 +68,7 @@
         $WHL = Parse-Hosts $WHL
 
         # Add hosts to array
-        $WHL | % {[void]$hosts.Add($_)}
+        $WHL | % {[void]$fetched_hosts.Add($_)}
     }
 
     # If we had to create a directory, Remove it.
@@ -94,11 +94,11 @@
         $LHL = Parse-Hosts $LHL
 
         # Add non-wildcard hosts to  array
-        $LHL | % {[void]$hosts.Add($_)}
+        $LHL | % {[void]$fetched_hosts.Add($_)}
     }
        
 
-    return $hosts
+    return $fetched_hosts
 }
 
 Function Extract-Filter-Domains
@@ -309,9 +309,9 @@ Function Remove-Conflicting-Wildcards
         $whitelist
     )
   
-    # Create ArrayList and populate with wildcards
-    $wildcards        | % {$wildcard_arr_list = [System.Collections.ArrayList]::new()} {[void]$wildcard_arr_list.Add($_)}
-   
+    # Create duplicate ArrayList for changes
+    $wildcard_arr_list = [System.Collections.ArrayList]::new($wildcards)
+       
     # For each wildcard
     $wildcards         | % {
         
@@ -549,8 +549,8 @@ Function Finalise-Hosts
         $nxhosts
     )
 
-    # Create an ArrayList of hosts
-    $hosts        | % {$hosts = [System.Collections.ArrayList]::new()} {[void]$hosts.Add($_)}
+    # Re-create the hosts arraylist
+    $hosts = [System.Collections.ArrayList]::new($hosts)
     
     # Add wildcards
     $wildcards    | % {[void]$hosts.Add($_)}
