@@ -163,34 +163,33 @@ Function Parse-Hosts
         $hosts
     )
  
-    # Remove local end-zone
-    $hosts          = $hosts -replace '127.0.0.1'`
-                             -replace '0.0.0.0'
-
+    # Remove local deadzone
     # Remove user comments
-    $hosts          = $hosts -replace '\s*(?:#.*)$'
-
     # Remove whitespace
-    $hosts          = $hosts.Trim()
+    # Exclude blank lines
+    $parsed_hosts = $hosts -replace '127.0.0.1'`
+                           -replace '0.0.0.0'`
+                           -replace '\s*(?:#.*)$'`
+                           -replace '\s+'`
+                           | ? {$_}
 
     # Check for filter lists
-    $filter_list    = Extract-Filter-Domains $hosts
+    $filter_list  = Extract-Filter-Domains $parsed_hosts
 
     if($filter_list)
     {
-        $hosts = $filter_list
+        $parsed_hosts = $filter_list
     }
     else
     {
-        $hosts = Extract-Domains $hosts
+        $parsed_hosts = Extract-Domains $parsed_hosts
     }
 
     # Remove WWW prefix
-    $hosts          = $hosts -replace "^www(?:[0-9]{1,3})?(?:\.)"
+    $parsed_hosts  = $parsed_hosts -replace "^www(?:[0-9]{1,3})?(?:\.)"
       
     # Output hosts
-    $hosts | ? {$_}
-   
+    $parsed_hosts
 }
 
 <#
