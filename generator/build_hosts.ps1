@@ -1,8 +1,20 @@
 ﻿Clear-Host
 
+
 # Include functions file
 
 . "$PSScriptRoot\includes\scripts\functions.ps1"
+
+
+# Reset variables
+
+$web_host_files   = $null
+$hosts            = $null
+$whitelist        = $null
+$wildcards        = $null
+$regex_removals   = $null
+$nxhosts          = $null
+
 
 # User Variables
 

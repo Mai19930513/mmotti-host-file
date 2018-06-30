@@ -308,9 +308,9 @@ Function Remove-Conflicting-Wildcards
         $whitelist
     )
   
-    # Create duplicate ArrayList for changes
-    $wildcard_arr_list = [System.Collections.ArrayList]::new($wildcards)
-       
+    # Convert wildcards to arraylist ready for additions and removals
+    $wildcards | % {$wildcard_arr_list=[System.Collections.ArrayList]::new()}{[void]$wildcard_arr_list.Add($_)}
+           
     # For each wildcard
     $wildcards         | % {
         
@@ -431,7 +431,8 @@ Function Remove-Host-Clutter
     )
 
     # Create duplicate array for removals
-    $cleaned_hosts = [System.Collections.ArrayList]::new($hosts)
+    # Convert hosts to arraylist ready for additions and removals
+    $hosts | % {$cleaned_hosts=[System.Collections.ArrayList]::new()}{[void]$cleaned_hosts.Add($_)}
 
     # Reverse each string
     # Sort them again
@@ -565,7 +566,7 @@ Function Finalise-Hosts
     )
 
     # Convert hosts to arraylist ready for additions and removals
-    $hosts = [System.Collections.ArrayList]::new($hosts)
+    $hosts | % {$hosts=[System.Collections.ArrayList]::new()}{[void]$hosts.Add($_)}
     
     # Add wildcards
     $wildcards    | % {[void]$hosts.Add($_)}
