@@ -4,11 +4,6 @@
 
 . "$PSScriptRoot\includes\scripts\functions.ps1"
 
-# Reset arrays
-
-$hosts            = [System.Collections.ArrayList]::new()
-$wildcards        = [System.Collections.ArrayList]::new()
-
 # User Variables
 
 $parent_dir       = Split-Path $PSScriptRoot
@@ -30,7 +25,7 @@ $out_file         = "$parent_dir\hosts"
 $check_heartbeat  = $false
 
 
-# Collate hosts
+# Fetch hosts
 
 Write-Output "--> Fetching hosts"
 
@@ -38,7 +33,8 @@ $web_host_files   = Get-Content $web_sources | ? {$_}
 
 Fetch-Hosts -w_host_files $web_host_files -l_host_files $local_blacklists -dir $host_down_dir `
             | sort -Unique `
-            | % {[void]$hosts.Add($_)}
+            | % {$hosts=[System.Collections.ArrayList]::new()} {[void]$hosts.Add($_)}
+
 
 # Status update
 
@@ -56,9 +52,8 @@ $whitelist        = (Get-Content $local_whitelist) | ? {$_}
 
 Write-Output "--> Fetching wildcards"
 
-Extract-Wildcards $(Get-Content $local_blacklists) `
-                  | sort -Unique `
-                  | % {[void]$wildcards.Add($_)}
+$wildcards        = Extract-Wildcards $(Get-Content $local_blacklists) `
+                    | sort -Unique
 
 
 # Quit in the event of no valid hosts
