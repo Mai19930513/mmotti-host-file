@@ -189,7 +189,7 @@ Function Parse-Hosts
     $parsed_hosts  = $parsed_hosts -replace "^www(?:[0-9]{1,3})?(?:\.)"
       
     # Output hosts
-    $parsed_hosts
+    return $parsed_hosts
 }
 
 <#
@@ -561,7 +561,7 @@ Function Finalise-Hosts
         $nxhosts
     )
 
-    # Re-create the hosts arraylist
+    # Convert hosts to arraylist ready for additions and removals
     $hosts = [System.Collections.ArrayList]::new($hosts)
     
     # Add wildcards
