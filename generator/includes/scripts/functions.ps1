@@ -400,6 +400,9 @@ Function Regex-Remove
         [Parameter(Mandatory=$true)]
         $hosts
     )
+
+    # Convert hosts to arraylist ready for additions and removals
+    $hosts | % {$hosts=[System.Collections.ArrayList]::new()}{[void]$hosts.Add($_)}
     
     # Loop through each regex and select only non-matching items
     foreach($regex in $regex_removals)
