@@ -1,8 +1,20 @@
 ﻿Clear-Host
 
+
 # Include functions file
 
 . "$PSScriptRoot\includes\scripts\functions.ps1"
+
+
+# Reset variables
+
+$web_host_files   = $null
+$hosts            = $null
+$whitelist        = $null
+$wildcards        = $null
+$regex_removals   = $null
+$nxhosts          = $null
+
 
 # User Variables
 
@@ -31,10 +43,8 @@ Write-Output "--> Fetching hosts"
 
 $web_host_files   = Get-Content $web_sources | ? {$_}
 
-Fetch-Hosts -w_host_files $web_host_files -l_host_files $local_blacklists -dir $host_down_dir `
-            | sort -Unique `
-            | % {$hosts=[System.Collections.ArrayList]::new()} {[void]$hosts.Add($_)}
-
+$hosts            = Fetch-Hosts -w_host_files $web_host_files -l_host_files $local_blacklists -dir $host_down_dir `
+                                | sort -Unique
 
 # Status update
 
