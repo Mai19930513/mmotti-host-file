@@ -426,7 +426,10 @@ Function Remove-Host-Clutter
         [Parameter(Mandatory=$true)]
         $hosts
     )
-    
+
+    # Create duplicate array for removals
+    $cleaned_hosts = [System.Collections.ArrayList]::new($hosts)
+
     # Reverse each string
     # Sort them again
     # Set initial variables
@@ -434,18 +437,28 @@ Function Remove-Host-Clutter
            | sort `
            | % {$previous_host=$null} {
 
-            # If this is the first host to process, or the reversed string is not like the previous
+            # If this is the first host to process 
+            # or the reversed string is not like the previous
             if((!$previous_host) -or ($_ -notlike "$previous_host.*"))
             {
-                # Output the reversed host
-                Reverse-String $_
                 # Set the current host to this host
                 $previous_host = $_
             }
-
-            # Skip to the next
-            return
+            # else, the host is like the previous
+            else
+            {
+                # Re-reverse the string
+                $_ = Reverse-String $_
+                
+                # Remove it from the hosts array
+                while($cleaned_hosts.Contains($_))
+                {
+                    $cleaned_hosts.Remove($_)
+                }
+            }
     } 
+    
+    return $cleaned_hosts
 }
 
 Function Check-Heartbeat
