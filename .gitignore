@@ -1,3 +1,1 @@
-generator/build_blacklist.ps1
-generator/includes/scripts/get-pi-blocked-domains.ps1
 generator/includes/hosts
