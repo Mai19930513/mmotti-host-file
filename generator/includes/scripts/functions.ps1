@@ -10,12 +10,9 @@
 
     # SSL Support
     [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
-    
-    # Create empty hosts array
-    $fetched_hosts    = [System.Collections.ArrayList]::new()
 
     # Regex for the downloaded host files
-    $hf_regex         = "^host_(?:\d){16}\.txt$"
+    $hf_regex         = "^host_(?:\d{16})\.txt$"
 
     # If the host download directory exists, clear it out.
     # Otherwise create a fresh directory
@@ -65,10 +62,7 @@
         $WHL = (Get-Content $dwn_host) | ? {$_}
 
         # Parse it
-        $WHL = Parse-Hosts $WHL
-
-        # Add hosts to array
-        $WHL | % {[void]$fetched_hosts.Add($_)}
+        Parse-Hosts $WHL
     }
 
     # If we had to create a directory, Remove it.
@@ -91,14 +85,8 @@
         $LHL = (Get-Content $_) | ? {$_}
 
         # Parse it
-        $LHL = Parse-Hosts $LHL
-
-        # Add non-wildcard hosts to  array
-        $LHL | % {[void]$fetched_hosts.Add($_)}
+        Parse-Hosts $LHL
     }
-       
-
-    return $fetched_hosts
 }
 
 Function Extract-Filter-Domains
@@ -269,33 +257,32 @@ Function Process-Wildcard-Regex
     )
 
     # Define replacement pattern for each valid wildcard match
-    Switch -Regex ($wildcard)
+    $replace_pattern =
+        Switch -Regex ($wildcard)
+        {
+            '(?i)^\*[A-Z0-9-_.]+$'
             {
-                '(?i)^\*[A-Z0-9-_.]+$'
-                {
-                    $replace_pattern = "^\*([A-Z0-9-_.]+)$", '$1$'
-                }
-                '(?i)^\*[A-Z0-9-_.]+\*$'
-                {
-                     $replace_pattern = "^\*([A-Z0-9-_.]+)\*$", '$1'
-                }
-                '(?i)^[A-Z0-9-_.]+\*$'
-                {
-                    $replace_pattern ="^([A-Z0-9-_.]+)\*$", '^$1'
-                }
-
-                # No regex match
-                Default
-                {
-                    # Output error and exit function
-                    Write-Error "$wildcard is not a valid wildcard."
-                    return
-                }
+                "^\*([A-Z0-9-_.]+)$", '$1$'
             }
-      
-    
+            '(?i)^\*[A-Z0-9-_.]+\*$'
+            {
+                "^\*([A-Z0-9-_.]+)\*$", '$1'
+            }
+            '(?i)^[A-Z0-9-_.]+\*$'
+            {
+                "^([A-Z0-9-_.]+)\*$", '^$1'
+            }
+
+            # No regex match
+            Default
+            {
+                # Output error and exit function
+                Write-Error "$wildcard is not a valid wildcard."
+                return
+            }
+        }
+
     $wildcard -replace $replace_pattern -replace "\.", "\."
-                  
 }
 
 Function Remove-Conflicting-Wildcards
