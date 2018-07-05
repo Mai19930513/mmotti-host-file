@@ -269,33 +269,32 @@ Function Process-Wildcard-Regex
     )
 
     # Define replacement pattern for each valid wildcard match
-    Switch -Regex ($wildcard)
+    $replace_pattern =
+        Switch -Regex ($wildcard)
+        {
+            '(?i)^\*[A-Z0-9-_.]+$'
             {
-                '(?i)^\*[A-Z0-9-_.]+$'
-                {
-                    $replace_pattern = "^\*([A-Z0-9-_.]+)$", '$1$'
-                }
-                '(?i)^\*[A-Z0-9-_.]+\*$'
-                {
-                     $replace_pattern = "^\*([A-Z0-9-_.]+)\*$", '$1'
-                }
-                '(?i)^[A-Z0-9-_.]+\*$'
-                {
-                    $replace_pattern ="^([A-Z0-9-_.]+)\*$", '^$1'
-                }
-
-                # No regex match
-                Default
-                {
-                    # Output error and exit function
-                    Write-Error "$wildcard is not a valid wildcard."
-                    return
-                }
+                "^\*([A-Z0-9-_.]+)$", '$1$'
             }
-      
-    
+            '(?i)^\*[A-Z0-9-_.]+\*$'
+            {
+                "^\*([A-Z0-9-_.]+)\*$", '$1'
+            }
+            '(?i)^[A-Z0-9-_.]+\*$'
+            {
+                "^([A-Z0-9-_.]+)\*$", '^$1'
+            }
+
+            # No regex match
+            Default
+            {
+                # Output error and exit function
+                Write-Error "$wildcard is not a valid wildcard."
+                return
+            }
+        }
+
     $wildcard -replace $replace_pattern -replace "\.", "\."
-                  
 }
 
 Function Remove-Conflicting-Wildcards
