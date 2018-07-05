@@ -15,7 +15,7 @@
     $fetched_hosts    = [System.Collections.ArrayList]::new()
 
     # Regex for the downloaded host files
-    $hf_regex         = "^host_(?:\d){16}\.txt$"
+    $hf_regex         = "^host_(?:\d{16})\.txt$"
 
     # If the host download directory exists, clear it out.
     # Otherwise create a fresh directory
