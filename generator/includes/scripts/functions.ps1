@@ -10,9 +10,6 @@
 
     # SSL Support
     [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
-    
-    # Create empty hosts array
-    $fetched_hosts    = [System.Collections.ArrayList]::new()
 
     # Regex for the downloaded host files
     $hf_regex         = "^host_(?:\d{16})\.txt$"
@@ -65,10 +62,7 @@
         $WHL = (Get-Content $dwn_host) | ? {$_}
 
         # Parse it
-        $WHL = Parse-Hosts $WHL
-
-        # Add hosts to array
-        $WHL | % {[void]$fetched_hosts.Add($_)}
+        Parse-Hosts $WHL
     }
 
     # If we had to create a directory, Remove it.
@@ -91,14 +85,8 @@
         $LHL = (Get-Content $_) | ? {$_}
 
         # Parse it
-        $LHL = Parse-Hosts $LHL
-
-        # Add non-wildcard hosts to  array
-        $LHL | % {[void]$fetched_hosts.Add($_)}
+        Parse-Hosts $LHL
     }
-       
-
-    return $fetched_hosts
 }
 
 Function Extract-Filter-Domains
