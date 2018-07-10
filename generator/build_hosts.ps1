@@ -20,13 +20,13 @@ $nxhosts          = $null
 
 $parent_dir       = Split-Path $PSScriptRoot
 
-$web_sources      = "$PSScriptRoot\includes\config\user_settings\web_sources.txt"
+$web_sources      = "$PSScriptRoot\includes\settings\sources.txt"
 
 $host_down_dir    = "$PSScriptRoot\includes\hosts"
 
-$local_blacklists = "$PSScriptRoot\includes\config\user_settings\blacklist.txt"
-$local_whitelist  = "$PSScriptRoot\includes\config\user_settings\whitelist.txt"
-$local_nxhosts    = "$PSScriptRoot\includes\config\generated_settings\nxdomains.txt"
+$local_blacklists = "$PSScriptRoot\includes\settings\blacklist.txt"
+$local_whitelist  = "$PSScriptRoot\includes\settings\whitelist.txt"
+$local_nxhosts    = "$PSScriptRoot\includes\settings\nxdomains.txt"
 
 $out_file         = "$parent_dir\hosts"
 
