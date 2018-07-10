@@ -2,8 +2,8 @@
 {
     Param
     (
-        $w_host_files,
-        $l_host_files,
+        $w_host_sources,
+        $l_host_file,
         [Parameter(Mandatory=$true)]
         $dir
     )
@@ -12,7 +12,11 @@
     [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
 
     # Regex for the downloaded host files
-    $hf_regex         = "^host_(?:\d{16})\.txt$"
+    $hf_regex = "^host_(?:\d{16})\.txt$"
+    
+    <# 
+        Create download directory for host files
+    #>
 
     # If the host download directory exists, clear it out.
     # Otherwise create a fresh directory
@@ -31,12 +35,19 @@
         {
             Write-Error "Unable to create host download directory. Web hosts unavailable."
                       
-            $w_host_files = $null
+            $w_host_sources   = $null
         }         
     }
+
+
+    <# 
+        Start processing web sources
+    #>
+
    
-    # For each one
-    $web_host_files | % {
+    # For each web host source
+    $w_host_sources | % {
+            
         # Define timestamp
         $hf_stamp = Get-Date -Format ddMMyyHHmmssffff
             
@@ -63,29 +74,40 @@
 
         # Parse it
         Parse-Hosts $WHL
-    }
+    }  
 
-    # If we had to create a directory, Remove it.
+
+    <# 
+        Post-fetch cleanup
+    #>
+
+
+    # If we had to create a directory
+    # Remove it
+    # Otherwise just purge the hosts
     if($host_dir_created)
     {
         Remove-Item $dir -Recurse | Out-Null
     }
-    # Else, just purge the hosts
     else
     {
         Get-ChildItem $dir | ? {$_.Name -match $hf_regex} | Remove-Item | Out-Null
     }
-    
-     
-    $l_host_files | % {
-        # Status update
-        Write-Host "--> L: $_"
-           
-        # Read it
-        $LHL = (Get-Content $_) | ? {$_}
+
+
+    <# 
+        Start processing local sources
+    #>
+
+
+    # If there is a local blacklist
+    if($l_host_file)
+    {   
+         # Status update
+        Write-Host "--> L: Local Blacklist"
 
         # Parse it
-        Parse-Hosts $LHL
+        Parse-Hosts $l_host_file
     }
 }
 
@@ -291,7 +313,6 @@ Function Remove-Conflicting-Wildcards
     (
         [Parameter(Mandatory=$true)]
         $wildcards,
-        [Parameter(Mandatory=$true)]
         $whitelist
     )
   
@@ -482,7 +503,7 @@ Function Check-Heartbeat
            | % {
 
             # Store the domain incase we need it
-            $nx_host = $_
+            $nxdomain = $_
 
             # Output the current progress
             Write-Progress -Activity "Querying Hosts" -status "Query $i of $($hosts.Count)" -percentComplete ($i / $hosts.count*100)
@@ -502,10 +523,10 @@ Function Check-Heartbeat
                 if($err_code -eq $nx_err_code)
                 {
                     # Let the user know
-                    Write-Output "--> NXDOMAIN (#$nx): $nx_host"
+                    Write-Output "--> NXDOMAIN (#$nx): $nxdomain"
             
                     # Add to array
-                    $nx_sr.WriteLine($nx_host)
+                    $nx_sr.WriteLine($nxdomain)
 
                     # Iterate
                     $nx++
@@ -549,7 +570,7 @@ Function Finalise-Hosts
         [Parameter(Mandatory=$true)]
         $hosts,
         $wildcards,
-        $nxhosts
+        $nxdomains
     )
 
     # Convert hosts to arraylist ready for additions and removals
@@ -559,7 +580,7 @@ Function Finalise-Hosts
     $wildcards    | % {[void]$hosts.Add($_)}
 
     # Remove NXDOMAINS
-    $nxhosts      | % {
+    $nxdomains    | % {
                       
                     while($hosts.Contains($_))
                     {
