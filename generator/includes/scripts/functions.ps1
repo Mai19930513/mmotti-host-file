@@ -46,7 +46,7 @@
 
    
     # For each web host source
-    $w_host_sources | % {
+    $w_host_sources | ? {$_} | % {
             
         # Define timestamp
         $hf_stamp = Get-Date -Format ddMMyyHHmmssffff
@@ -55,7 +55,7 @@
         $dwn_host = "$dir\host_$hf_stamp.txt"
 
         # Status update
-        Write-Host "--> W: $_"
+        Write-Host "`t W: $_"
             
         try
         {
@@ -104,7 +104,7 @@
     if($l_host_file)
     {   
          # Status update
-        Write-Host "--> L: Local Blacklist"
+        Write-Host "`t L: Local Blacklist"
 
         # Parse it
         Parse-Hosts $l_host_file
@@ -222,7 +222,7 @@ Function Identify-Wildcard-Prefixes
     # Reverse each string
     # Sort them again
     # Set initial variables
-    $hosts | % {Reverse-String $_} `
+    $hosts |% {Reverse-String $_} `
            | sort `
            | % {$previous_host=$null; $i=0} {
                 
@@ -379,7 +379,7 @@ Function Fetch-Regex-Removals
     
 
     # For each whitelisted domain
-    $whitelist | % {
+    $whitelist | ? {$_} | % {
                     
         # If the whitelisted item is a wildcard
         if($_ -match "\*")
@@ -396,7 +396,7 @@ Function Fetch-Regex-Removals
 
     # For each wildcard
     # Fetch the correct regex formatting and add to array
-    $wildcards | % {Process-Wildcard-Regex $_}
+    $wildcards | ? {$_} | % {Process-Wildcard-Regex $_}
 }
 
 Function Regex-Remove
@@ -523,7 +523,7 @@ Function Check-Heartbeat
                 if($err_code -eq $nx_err_code)
                 {
                     # Let the user know
-                    Write-Output "--> NXDOMAIN (#$nx): $nxdomain"
+                    Write-Output "`t NXDOMAIN (#$nx): $nxdomain"
             
                     # Add to array
                     $nx_sr.WriteLine($nxdomain)
@@ -577,10 +577,10 @@ Function Finalise-Hosts
     $hosts | % {$hosts=[System.Collections.ArrayList]::new()}{[void]$hosts.Add($_)}
     
     # Add wildcards
-    $wildcards    | % {[void]$hosts.Add($_)}
+    $wildcards    | ? {$_} | % {[void]$hosts.Add($_)}
 
     # Remove NXDOMAINS
-    $nxdomains    | % {
+    $nxdomains    | ? {$_} | % {
                       
                     while($hosts.Contains($_))
                     {

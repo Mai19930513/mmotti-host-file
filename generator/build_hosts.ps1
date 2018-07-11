@@ -1,4 +1,13 @@
-﻿Clear-Host
+﻿<#
+    Reset variables
+
+    To make sure those using PowerShell ISE execute the script with
+    a clean slate.
+#>
+
+
+Remove-Variable * -ErrorAction SilentlyContinue; Remove-Module *; $error.Clear(); Clear-Host
+
 
 <#
     Include functions
@@ -9,41 +18,27 @@
 
 
 <#
-    Reset variables
-#>
-
-
-$blacklist             = @()
-$hosts                 = @()
-$nxdomains             = @()
-$regex_removals        = @()
-$web_host_files        = @()
-$whitelist             = @()
-$wildcards             = @()
-
-
-<#
     Set script parameters
 #>
 
 
-$parent_dir            = Split-Path $PSScriptRoot
+# Directories
 
-$web_sources           = "$PSScriptRoot\settings\sources.txt"
+$dir_parent       = Split-Path $PSScriptRoot
+$dir_settings     = "$PSScriptRoot\settings"
+$dir_hosts        = "$PSScriptRoot\hosts"
 
-$host_down_dir         = "$PSScriptRoot\hosts"
+# Config files
 
-$local_blacklist       = "$PSScriptRoot\settings\blacklist.txt"
-$local_whitelist       = "$PSScriptRoot\settings\whitelist.txt"
-$local_nxhosts         = "$PSScriptRoot\settings\nxdomains.txt"
+$sources         = "$dir_settings\sources.txt"
+$file_blacklist  = "$dir_settings\blacklist.txt"
+$file_whitelist  = "$dir_settings\whitelist.txt"
+$file_nxdomains  = "$dir_settings\nxdomains.txt"
 
-$out_file              = "$parent_dir\hosts"
-
-
-# Check the domain is still alive?
-# This can take some time depending on host counts.
-
-$check_heartbeat       = $false
+# Settings
+$out_file        = "$dir_parent\hosts"
+$exit_timeout    = 10     # Seconds
+$check_heartbeat = $false # Check for NXDOMAINS?
 
 
 <#
@@ -54,50 +49,50 @@ $check_heartbeat       = $false
 #>
 
 
-Write-Output "--> Fetching: Hosts"
+Write-Output         "Fetching hosts... `n"
 
 # Read web host sources
 
 try
 {
-    $web_host_files    = Get-Content $web_sources -ErrorAction Stop | ? {$_}
+    $web_host_files = Get-Content $sources -ErrorAction Stop | ? {$_}
 }
 catch
 {
-    Write-Output "--> Warning: Web sources file unavailable"
+    Write-Output     "`t Web sources file unavailable `n"
 }
 
 # Read local blacklist
 
 try
 {
-    $blacklist         = Get-Content $local_blacklist -ErrorAction Stop | ? {$_}
+    $blacklist      = Get-Content $file_blacklist -ErrorAction Stop | ? {$_}
 }
 catch
 {
-    Write-Output "--> Warning: Local blacklist file unavailable"
+    Write-Output     "`t Local blacklist file unavailable `n"
 }
 
 
 # Fetch valid hosts from the provided web and local hosts
 
-$hosts                 = Fetch-Hosts -w_host_sources $web_host_files -l_host_file $blacklist -dir $host_down_dir `
-                                     | sort -Unique
+$hosts              = Fetch-Hosts -w_host_sources $web_host_files -l_host_file $blacklist -dir $dir_hosts `
+                                  | sort -Unique
 
 
 # Quit in the event of no valid hosts
 
 if(!$hosts)
 {
-    Write-Output "No hosts detected. Please check your configuration."
-    Start-Sleep -Seconds 5
+    Write-Output     "No hosts detected. Please check your configuration."
+    Start-Sleep      -Seconds 5
     exit
 }
 
 
 # Status update
 
-Write-Output "--> Hosts: $($hosts.Count)"
+Write-Output         "`n`t # Hosts: $($hosts.Count) `n"
 
 
 <#
@@ -108,18 +103,20 @@ Write-Output "--> Hosts: $($hosts.Count)"
 #>
 
 
-Write-Output "--> Fetching: Whitelist"
+Write-Output         "Fetching whitelist... `n"
 
 # Read whitelist file (if available)
 
 try
 {
 
-    $whitelist         = Get-Content $local_whitelist -ErrorAction Stop | ? {$_}
+    $whitelist      = Get-Content $file_whitelist -ErrorAction Stop | ? {$_}
+
+    Write-Output     "`t # Whitelist: $($whitelist.Count) `n"
 }
 catch
 {
-    Write-Output "--> Warning: Whitelist unavailable"
+    Write-Output     "`t Whitelist unavailable `n"
     
 }
 
@@ -132,22 +129,27 @@ catch
 #>
 
 
-Write-Output "--> Fetching: Wildcards"
-
 # If a blacklist exists
 if($blacklist)
 {
+    Write-Output     "Fetching wildcards... `n"
+
     # Extract wildcards from it
-    $wildcards         = Extract-Wildcards $blacklist `
-                         | sort -Unique
+    $wildcards      = Extract-Wildcards $blacklist `
+                      | sort -Unique
 
     # If any wildcards were extracted
-    # Remove any that conflict with whitelist or any duplicates
-    if($wilcards)
+    # Remove conflicting or duplicate wildcards
+    # Otherwise output a blank array
+    if($wildcards)
     {
-        Write-Output "--> Checking wildcards for conflicts"
+        Write-Output "`t # Wildcards: $($wildcards.Count) `n"
 
-        $wildcards     = Remove-Conflicting-Wildcards -wildcards $wildcards -whitelist $whitelist
+        Write-Output "Checking wildcards for conflicts... `n"
+
+        $wildcards  = Remove-Conflicting-Wildcards -wildcards $wildcards -whitelist $whitelist
+
+        Write-Output "`t # Wildcards: $($wildcards.Count) `n"
     }
 }
 
@@ -157,9 +159,11 @@ if($blacklist)
 #>
 
 
-Write-Output "--> Fetching: Regex criteria"
+Write-Output         "Fetching regex criteria... `n"
 
-$regex_removals        = Fetch-Regex-Removals -whitelist $whitelist -wildcards $wildcards
+$regex_removals     = Fetch-Regex-Removals -whitelist $whitelist -wildcards $wildcards
+
+Write-Output         "`t # Regex checks: $($regex_removals.Count) `n"
 
 
 <#
@@ -170,16 +174,18 @@ $regex_removals        = Fetch-Regex-Removals -whitelist $whitelist -wildcards $
     things to remove.
 #>
 
+
 # If we have any removals
 # Remove them from the host array
 # Show count
+
 if($regex_removals)
 {
-    Write-Output "--> Running: Regex removals"
+    Write-Output     "Running regex removals... `n"
 
-    $hosts             = Regex-Remove -regex_removals $regex_removals -hosts $hosts
+    $hosts          = Regex-Remove -regex_removals $regex_removals -hosts $hosts
 
-    Write-Output "--> Hosts: $($hosts.count)"
+    Write-Output     "`t # Hosts: $($hosts.Count) `n"
 }
 
 
@@ -194,14 +200,11 @@ if($regex_removals)
 #>
 
 
-Write-Output "--> Running: Remove host clutter"
+Write-Output         "Removing host clutter... `n"
 
-$hosts                 = Remove-Host-Clutter $hosts
+$hosts              = Remove-Host-Clutter $hosts
 
-
-# Status update
-
-Write-Output "--> Hosts: $($hosts.Count)"
+Write-Output         "`t # Hosts: $($hosts.Count) `n"
 
 
 <#
@@ -214,11 +217,11 @@ Write-Output "--> Hosts: $($hosts.Count)"
 
 if($check_heartbeat)
 {
-    Write-Output "--> Checking for heartbeats" 
+    Write-Output     "Checking for heartbeats... `n"
     
     # Check the heartbeats
 
-    Check-Heartbeat -hosts $hosts -out_file $local_nxhosts
+    Check-Heartbeat  -hosts $hosts -out_file $file_nxdomains
 
 }
 
@@ -230,16 +233,19 @@ if($check_heartbeat)
 #>
 
 
-Write-Output "--> Fetching: NXDOMAINS"
+Write-Output         "Fetching NXDOMAINS... `n"
 
 # Read NXDOMAINS file (if available)
+
 try
 {
-    $nxdomains         = Get-Content $local_nxhosts -ErrorAction Stop | ? {$_}
+    $nxdomains      = Get-Content $file_nxdomains -ErrorAction Stop | ? {$_}
+    
+    Write-Output     "`t # NXDOMAINS: $($nxdomains.Count) `n"
 }
 catch
 {
-    Write-Output "--> Warning: NXDOMAINS unavailable"
+    Write-Output     "`t NXDOMAINS unavailable `n"
 }
 
 
@@ -250,11 +256,11 @@ catch
 #>
 
 
-Write-Output "--> Finalising"
+Write-Output         "Finalising... `n"
 
-$hosts                 = Finalise-Hosts -hosts $hosts -wildcards $wildcards -nxdomains $nxdomains
+$hosts              = Finalise-Hosts -hosts $hosts -wildcards $wildcards -nxdomains $nxdomains
 
-Write-Output "--> Hosts: $($hosts.count)"
+Write-Output         "`t # Hosts: $($hosts.Count) `n"
 
 
 <#
@@ -264,6 +270,20 @@ Write-Output "--> Hosts: $($hosts.count)"
 #>
 
 
-Write-Output "--> Saving host file to: $out_file"
+Write-Output         "Saving host file to: $out_file `n"
 
-Save-Hosts -hosts $hosts -out_file $out_file
+Save-Hosts           -hosts $hosts -out_file $out_file
+
+
+<#
+    Sleep
+
+    Give the user a chance to read the script output
+#>
+
+
+Write-Output         "Exiting in $exit_timeout seconds"
+
+Start-Sleep          -Seconds $exit_timeout
+
+exit
