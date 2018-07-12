@@ -47,9 +47,6 @@ $check_heartbeat = $false
 
 <#
     Fetch whitelist
-
-    Try / catch statements to suppress errors if the user does
-    not provide a whitelist.
 #>
 
 Write-Output         "--> Fetching whitelist"
@@ -70,9 +67,6 @@ if(Test-Path $file_whitelist -PathType Leaf)
 
 <#
     Fetch hosts
-    
-    Try / Catch statements to suppress errors if the user does not
-    include web host sources or a local blacklist
 #>
 
 Write-Output         "--> Fetching hosts"
