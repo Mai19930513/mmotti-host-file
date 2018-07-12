@@ -533,7 +533,7 @@ Function Check-Heartbeat
                 if($err_code -eq $nx_err_code)
                 {
                     # Let the user know
-                    Write-Output "`t NXDOMAIN (#$nx): $nxdomain"
+                    Write-Output "--> NXDOMAIN (#$nx): $nxdomain"
             
                     # Add to array
                     $nx_sr.WriteLine($nxdomain)
