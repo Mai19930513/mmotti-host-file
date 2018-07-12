@@ -32,7 +32,6 @@ $args_finalise    = @{}
 # Directories
 $dir_parent       = Split-Path $PSScriptRoot
 $dir_settings     = "$PSScriptRoot\settings"
-$dir_hosts        = "$PSScriptRoot\hosts"
 
 # Config files
 $file_sources    = "$dir_settings\sources.txt"
@@ -81,7 +80,7 @@ if(Test-Path $file_sources -PathType Leaf)
     {
         # Fetch the hosts
         # Add to hosts array
-        Fetch-Hosts -host_sources $web_host_files -dir $dir_hosts `
+        Fetch-Hosts -host_sources $web_host_files `
                     | sort -Unique `
                     | % {if(!$hosts.Contains($_)){[void]$hosts.Add($_)}}
     }   
