@@ -24,7 +24,6 @@ $hosts             = [System.Collections.ArrayList]::new()
 # These are used where we have optional parameters
 $args_white_wcard = @{}
 $args_finalise    = @{}
-$args_rm_dwn_dir  = @{}
 
 <#
     Set script parameters
@@ -80,22 +79,11 @@ if(Test-Path $file_sources -PathType Leaf)
     # If there are host sources
     if($web_host_files)
     {
-        # Create / clean download directory
-        # If we had to create it, flag it for removal
-        if(Create-HostDir $dir_hosts)
-        {
-            # Set the remove argument
-            $args_rm_dwn_dir.Remove = $true
-        }
-        
         # Fetch the hosts
         # Add to hosts array
         Fetch-Hosts -host_sources $web_host_files -dir $dir_hosts `
                     | sort -Unique `
                     | % {if(!$hosts.Contains($_)){[void]$hosts.Add($_)}}
-        
-        # Clear the download directory
-        Clear-HostDir $dir_hosts @args_rm_dwn_dir
     }   
 }
 

@@ -1,64 +1,4 @@
-﻿Function Create-HostDir
-{
-    Param
-    (
-        [Parameter(Mandatory=$true)]
-        [string]
-        $dir
-    )
-    
-    # Regex for the downloaded host files
-    $hf_regex = "^host_(?:\d{16})\.txt$"
-
-    # If the host download directory exists, clear it out.
-    # Otherwise create a fresh directory
-    if(Test-Path $dir)
-    {
-        Get-ChildItem $dir | ? {$_.Name -match $hf_regex} | Remove-Item | Out-Null
-    }
-    else
-    {
-        try
-        {
-            New-Item -ItemType Directory -Path $dir | Out-Null
-            return $true
-        }
-        catch
-        {
-            Write-Error "Unable to create host download directory. Web hosts unavailable."
-        }      
-    }
-}
-
-Function Clear-HostDir
-{
-    Param
-    (
-        [Parameter(Mandatory=$true)]
-        [string]
-        $dir,
-        [switch]
-        $Remove
-    )
-
-    # Regex for the downloaded host files
-    $hf_regex = "^host_(?:\d{16})\.txt$"
-
-    # If we had to create a directory
-    # Remove it
-    # Otherwise just purge the hosts
-    if($Remove)
-    {
-        Remove-Item $dir -Recurse | Out-Null
-    }
-    else
-    {
-        Get-ChildItem $dir | ? {$_.Name -match $hf_regex} | Remove-Item | Out-Null
-    }
-    
-}
-
-Function Fetch-Hosts
+﻿Function Fetch-Hosts
 {
     Param
     (
@@ -73,6 +13,30 @@ Function Fetch-Hosts
     
     # SSL Support
     [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
+
+    # Regex for the downloaded host files
+    $hf_regex = "^host_(?:\d{16})\.txt$"
+
+    # If the host download directory exists, clear it out.
+    # Otherwise create a fresh directory
+    if(Test-Path $dir)
+    {
+        Get-ChildItem $dir | ? {$_.Name -match $hf_regex} | Remove-Item | Out-Null
+    }
+    else
+    {
+        try
+        {
+            New-Item -ItemType Directory -Path $dir | Out-Null
+            $dir_created = $true
+        }
+        catch
+        {
+            Write-Error "Unable to create host download directory. Web hosts unavailable."
+            return
+        }      
+    }
+    
 
     <# 
         Start processing web sources
@@ -107,6 +71,17 @@ Function Fetch-Hosts
 
         # Parse it
         Parse-Hosts $WHL
+    }
+
+    # If we had to create a directory
+    # Remove it
+    if($dir_created)
+    {
+        Remove-Item $dir -Recurse | Out-Null
+    }
+    else
+    {
+        Get-ChildItem $dir | ? {$_.Name -match $hf_regex} | Remove-Item | Out-Null
     }
 }
 
