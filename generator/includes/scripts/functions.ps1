@@ -1,22 +1,14 @@
-﻿Function Fetch-Hosts
+﻿Function Create-HostDir
 {
     Param
     (
-        $w_host_sources,
-        $l_host_file,
         [Parameter(Mandatory=$true)]
+        [string]
         $dir
     )
-
-    # SSL Support
-    [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
-
+    
     # Regex for the downloaded host files
     $hf_regex = "^host_(?:\d{16})\.txt$"
-    
-    <# 
-        Create download directory for host files
-    #>
 
     # If the host download directory exists, clear it out.
     # Otherwise create a fresh directory
@@ -29,33 +21,74 @@
         try
         {
             New-Item -ItemType Directory -Path $dir | Out-Null
-            $host_dir_created = $true
+            return $true
         }
         catch
         {
             Write-Error "Unable to create host download directory. Web hosts unavailable."
-                      
-            $w_host_sources   = $null
-        }         
+        }      
     }
+}
 
+Function Clear-HostDir
+{
+    Param
+    (
+        [Parameter(Mandatory=$true)]
+        [string]
+        $dir,
+        [switch]
+        $Remove
+    )
+
+    # Regex for the downloaded host files
+    $hf_regex = "^host_(?:\d{16})\.txt$"
+
+    # If we had to create a directory
+    # Remove it
+    # Otherwise just purge the hosts
+    if($Remove)
+    {
+        Remove-Item $dir -Recurse | Out-Null
+    }
+    else
+    {
+        Get-ChildItem $dir | ? {$_.Name -match $hf_regex} | Remove-Item | Out-Null
+    }
+    
+}
+
+Function Fetch-Hosts
+{
+    Param
+    (
+        [Parameter(Mandatory)]
+        [string[]]
+        $host_sources,
+        
+        [Parameter(Mandatory=$true)]
+        [string]
+        $dir
+    )
+    
+    # SSL Support
+    [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
 
     <# 
         Start processing web sources
     #>
-
-   
+ 
     # For each web host source
-    $w_host_sources | ? {$_} | % {
-            
+    $host_sources | % {
+
+        # Status update
+        Write-Host "--> $_"
+        
         # Define timestamp
         $hf_stamp = Get-Date -Format ddMMyyHHmmssffff
             
         # Define host file name
         $dwn_host = "$dir\host_$hf_stamp.txt"
-
-        # Status update
-        Write-Host "`t W: $_"
             
         try
         {
@@ -74,40 +107,6 @@
 
         # Parse it
         Parse-Hosts $WHL
-    }  
-
-
-    <# 
-        Post-fetch cleanup
-    #>
-
-
-    # If we had to create a directory
-    # Remove it
-    # Otherwise just purge the hosts
-    if($host_dir_created)
-    {
-        Remove-Item $dir -Recurse | Out-Null
-    }
-    else
-    {
-        Get-ChildItem $dir | ? {$_.Name -match $hf_regex} | Remove-Item | Out-Null
-    }
-
-
-    <# 
-        Start processing local sources
-    #>
-
-
-    # If there is a local blacklist
-    if($l_host_file)
-    {   
-         # Status update
-        Write-Host "`t L: Local Blacklist"
-
-        # Parse it
-        Parse-Hosts $l_host_file
     }
 }
 
@@ -116,6 +115,7 @@ Function Extract-Filter-Domains
     Param
     (
        [Parameter(Mandatory=$true)]
+       [string[]]
        $hosts 
     )
 
@@ -136,6 +136,7 @@ Function Extract-Domains
     Param
     (
        [Parameter(Mandatory=$true)]
+       [string[]]
        $hosts
     )
 
@@ -154,6 +155,7 @@ Function Extract-Wildcards
     Param
     (
        [Parameter(Mandatory=$true)]
+       [string[]]
        $hosts
     )
 
@@ -170,6 +172,7 @@ Function Parse-Hosts
     Param
     (
         [Parameter(Mandatory=$true)]
+        [string[]]
         $hosts
     )
  
@@ -275,6 +278,7 @@ Function Process-Wildcard-Regex
     Param
     (
         [Parameter(Mandatory=$true)]
+        [string]
         $wildcard
     )
 
@@ -312,7 +316,9 @@ Function Remove-Conflicting-Wildcards
     Param
     (
         [Parameter(Mandatory=$true)]
+        [string[]]
         $wildcards,
+        [string[]]
         $whitelist
     )
   
@@ -369,7 +375,9 @@ Function Fetch-Regex-Removals
 
     Param
     (
+        [string[]]
         $whitelist,
+        [string[]]
         $wildcards
     )
 
@@ -404,13 +412,12 @@ Function Regex-Remove
     Param
     (
         [Parameter(Mandatory=$true)]
+        [string[]]
         $regex_removals,
         [Parameter(Mandatory=$true)]
+        [System.Collections.ArrayList]
         $hosts
     )
-
-    # Convert hosts to arraylist ready for additions and removals
-    $hosts | % {$hosts=[System.Collections.ArrayList]::new()}{[void]$hosts.Add($_)}
     
     # Loop through each regex and select only non-matching items
     foreach($regex in $regex_removals)
@@ -435,6 +442,7 @@ Function Remove-Host-Clutter
     Param
     (
         [Parameter(Mandatory=$true)]
+        
         $hosts
     )
 
@@ -478,8 +486,10 @@ Function Check-Heartbeat
     Param
     (
         [Parameter(Mandatory=$true)]
+        [string[]]
         $hosts,
         [Parameter(Mandatory=$true)]
+        [string]
         $out_file
     )
     
@@ -550,11 +560,12 @@ Function Reverse-String
     Param
     (
         [Parameter(Mandatory=$true)]
+        [string]
         $string
     )
 
     # Convert to Char Array
-    $string = $string.toCharArray()
+    [string[]]$string = $string.toCharArray()
         
     # Reverse the characters
     [Array]::Reverse($string)
@@ -568,13 +579,13 @@ Function Finalise-Hosts
     Param
     (
         [Parameter(Mandatory=$true)]
+        [System.Collections.ArrayList]
         $hosts,
+        [string[]]
         $wildcards,
+        [string[]]
         $nxdomains
     )
-
-    # Convert hosts to arraylist ready for additions and removals
-    $hosts | % {$hosts=[System.Collections.ArrayList]::new()}{[void]$hosts.Add($_)}
     
     # Add wildcards
     $wildcards    | ? {$_} | % {[void]$hosts.Add($_)}
@@ -598,8 +609,10 @@ Function Save-Hosts
     Param
     (
         [Parameter(Mandatory=$true)]
+        [string[]]
         $hosts,
         [Parameter(Mandatory=$true)]
+        [string]
         $out_file
     )
     

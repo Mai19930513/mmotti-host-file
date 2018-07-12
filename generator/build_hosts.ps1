@@ -5,189 +5,164 @@
     a clean slate.
 #>
 
-
 Remove-Variable * -ErrorAction SilentlyContinue; Remove-Module *; $error.Clear(); Clear-Host
-
 
 <#
     Include functions
 #>
 
-
 . "$PSScriptRoot\includes\scripts\functions.ps1"
 
+<#
+    Initialise variables
+#>
+
+# Create empty hosts ArrayList
+$hosts             = [System.Collections.ArrayList]::new()
+
+# Create hash tables for splatting
+# These are used where we have optional parameters
+$args_white_wcard = @{}
+$args_finalise    = @{}
+$args_rm_dwn_dir  = @{}
 
 <#
     Set script parameters
 #>
 
-
 # Directories
-
 $dir_parent       = Split-Path $PSScriptRoot
 $dir_settings     = "$PSScriptRoot\settings"
 $dir_hosts        = "$PSScriptRoot\hosts"
 
 # Config files
-
-$sources         = "$dir_settings\sources.txt"
+$file_sources    = "$dir_settings\sources.txt"
 $file_blacklist  = "$dir_settings\blacklist.txt"
 $file_whitelist  = "$dir_settings\whitelist.txt"
 $file_nxdomains  = "$dir_settings\nxdomains.txt"
 
 # Settings
 $out_file        = "$dir_parent\hosts"
-$exit_timeout    = 10     # Seconds
-$check_heartbeat = $false # Check for NXDOMAINS?
-
+$check_heartbeat = $false
 
 <#
-    Start fetching hosts
-    
-    Try / Catch statements to suppress errors if the user does not
-    include web host sources or a local blacklist
+    Fetch whitelist
 #>
 
+Write-Output         "--> Fetching whitelist"
 
-Write-Output         "Fetching hosts... `n"
-
-# Read web host sources
-
-try
+# If the whitelist exists
+if(Test-Path $file_whitelist -PathType Leaf)
 {
-    $web_host_files = Get-Content $sources -ErrorAction Stop | ? {$_}
-}
-catch
-{
-    Write-Output     "`t Web sources file unavailable `n"
-}
+    # Read it
+    $whitelist      = Get-Content $file_whitelist | ? {$_}
 
-# Read local blacklist
-
-try
-{
-    $blacklist      = Get-Content $file_blacklist -ErrorAction Stop | ? {$_}
-}
-catch
-{
-    Write-Output     "`t Local blacklist file unavailable `n"
+    # If there are items in the whitelist
+    if($whitelist)
+    {   
+        # Add to argument
+        $args_white_wcard.whitelist = $whitelist
+    }
 }
 
+<#
+    Fetch hosts
+#>
 
-# Fetch valid hosts from the provided web and local hosts
+Write-Output         "--> Fetching hosts"
 
-$hosts              = Fetch-Hosts -w_host_sources $web_host_files -l_host_file $blacklist -dir $dir_hosts `
-                                  | sort -Unique
+# If the host sources file exists
+if(Test-Path $file_sources -PathType Leaf)
+{
+    # Read it
+    $web_host_files = Get-Content $file_sources | ? {$_}
+    
+    # If there are host sources
+    if($web_host_files)
+    {
+        # Create / clean download directory
+        # If we had to create it, flag it for removal
+        if(Create-HostDir $dir_hosts)
+        {
+            # Set the remove argument
+            $args_rm_dwn_dir.Remove = $true
+        }
+        
+        # Fetch the hosts
+        # Add to hosts array
+        Fetch-Hosts -host_sources $web_host_files -dir $dir_hosts `
+        | sort -Unique `
+        | % {if(!$hosts.Contains($_)){[void]$hosts.Add($_)}}           
+        
+        # Clear the download directory
+        Clear-HostDir $dir_hosts @args_rm_dwn_dir
+    }   
+}
 
+# If the local blacklist exists
+if(Test-Path $file_blacklist -PathType Leaf)
+{
+    # Read it
+    $blacklist      = Get-Content $file_blacklist | ? {$_}
+
+    # If there are items in the local blacklist
+    if($blacklist)
+    {
+        # Fetch hosts
+        # if not already in the array, add the host to it.
+        Parse-Hosts       $blacklist | sort -Unique `
+                                     | % {if(!$hosts.Contains($_)){[void]$hosts.Add($_)}}
+        
+        # Extract wildcards from it
+
+        Write-Output     "--> Fetching wildcards"
+
+        $wildcards      = Extract-Wildcards $blacklist `
+                          | sort -Unique
+
+        # If any wildcards were extracted
+        if($wildcards)
+        {
+            # Add wildcards argument
+            $args_white_wcard.wildcards = $wildcards
+            
+            # Remove conflicts
+            $wildcards                   = Remove-Conflicting-Wildcards @args_white_wcard
+
+            # If there are still wildcards after conflict removal
+            if($wildcards)
+            {
+                # Add updated wildcards to necessary arguments
+                $args_white_wcard.wildcards  = $wildcards
+                $args_finalise.wildcards     = $wildcards
+            }
+        }
+    }
+}
 
 # Quit in the event of no valid hosts
-
 if(!$hosts)
 {
-    Write-Output     "No hosts detected. Please check your configuration."
+    Write-Output     "--> No hosts detected. Please check your configuration."
     Start-Sleep      -Seconds 5
     exit
 }
 
-
-# Status update
-
-Write-Output         "`n`t # Hosts: $($hosts.Count) `n"
-
-
 <#
-    Fetch whitelist
-
-    Try / catch statements to suppress errors if the user does
-    not provide a whitelist.
+    Process Regex Removals
 #>
 
+Write-Output         "--> Processing Regex Removals"
 
-Write-Output         "Fetching whitelist... `n"
+$regex_removals     = Fetch-Regex-Removals @args_white_wcard
 
-# Read whitelist file (if available)
-
-try
-{
-
-    $whitelist      = Get-Content $file_whitelist -ErrorAction Stop | ? {$_}
-
-    Write-Output     "`t # Whitelist: $($whitelist.Count) `n"
-}
-catch
-{
-    Write-Output     "`t Whitelist unavailable `n"
-    
-}
-
-
-<#
-    Extract wildcards
-
-    We extract wildcards from the local blacklist, so only process
-    if we have a blacklist.
-#>
-
-
-# If a blacklist exists
-if($blacklist)
-{
-    Write-Output     "Fetching wildcards... `n"
-
-    # Extract wildcards from it
-    $wildcards      = Extract-Wildcards $blacklist `
-                      | sort -Unique
-
-    # If any wildcards were extracted
-    # Remove conflicting or duplicate wildcards
-    # Otherwise output a blank array
-    if($wildcards)
-    {
-        Write-Output "`t # Wildcards: $($wildcards.Count) `n"
-
-        Write-Output "Checking wildcards for conflicts... `n"
-
-        $wildcards  = Remove-Conflicting-Wildcards -wildcards $wildcards -whitelist $whitelist
-
-        Write-Output "`t # Wildcards: $($wildcards.Count) `n"
-    }
-}
-
-
-<#
-    Fetch regex removal criteria
-#>
-
-
-Write-Output         "Fetching regex criteria... `n"
-
-$regex_removals     = Fetch-Regex-Removals -whitelist $whitelist -wildcards $wildcards
-
-Write-Output         "`t # Regex checks: $($regex_removals.Count) `n"
-
-
-<#
-    Run regex removals
-    
-    It's possible that the $regex_removals could be null if the user has
-    not provided a whitelist or any wildcards. We'll only proceed if there are
-    things to remove.
-#>
-
-
-# If we have any removals
-# Remove them from the host array
-# Show count
-
+# If there are removals to process
 if($regex_removals)
 {
-    Write-Output     "Running regex removals... `n"
-
+    # Regex remove hosts
+    [System.Collections.ArrayList]`
     $hosts          = Regex-Remove -regex_removals $regex_removals -hosts $hosts
-
-    Write-Output     "`t # Hosts: $($hosts.Count) `n"
 }
-
 
 <#
     Remove host clutter
@@ -199,13 +174,10 @@ if($regex_removals)
     or bad.test.com
 #>
 
+Write-Output         "--> Removing host clutter"
 
-Write-Output         "Removing host clutter... `n"
-
+[System.Collections.ArrayList]`
 $hosts              = Remove-Host-Clutter $hosts
-
-Write-Output         "`t # Hosts: $($hosts.Count) `n"
-
 
 <#
     Check for dead hosts (NXDOMAINS)
@@ -214,10 +186,9 @@ Write-Output         "`t # Hosts: $($hosts.Count) `n"
     dead hosts to a file.
 #>
 
-
 if($check_heartbeat)
 {
-    Write-Output     "Checking for heartbeats... `n"
+    Write-Output     "--> Checking for heartbeats"
     
     # Check the heartbeats
 
@@ -225,29 +196,26 @@ if($check_heartbeat)
 
 }
 
-
 <#
     Fetch NXDOMAINS
 
     Fetch any domains that have been previously gathered and saved.
 #>
 
+Write-Output         "--> Fetching dead domains (NXDOMAINS)"
 
-Write-Output         "Fetching NXDOMAINS... `n"
-
-# Read NXDOMAINS file (if available)
-
-try
+# If the NXDOMAINS file exists
+if(Test-Path $file_nxdomains -PathType Leaf)
 {
-    $nxdomains      = Get-Content $file_nxdomains -ErrorAction Stop | ? {$_}
+    # Read it
+    $nxdomains      = Get-Content $file_nxdomains | ? {$_}  
     
-    Write-Output     "`t # NXDOMAINS: $($nxdomains.Count) `n"
+    # If there are NXDOMAINS
+    if($nxdomains)
+    {
+        $args_finalise.nxdomains = $nxdomains
+    } 
 }
-catch
-{
-    Write-Output     "`t NXDOMAINS unavailable `n"
-}
-
 
 <#
     Finalise the hosts
@@ -255,13 +223,10 @@ catch
     We need to add the wildcards, remove dead hosts and exclude duplicates
 #>
 
+Write-Output         "--> Finalising hosts"
 
-Write-Output         "Finalising... `n"
-
-$hosts              = Finalise-Hosts -hosts $hosts -wildcards $wildcards -nxdomains $nxdomains
-
-Write-Output         "`t # Hosts: $($hosts.Count) `n"
-
+[System.Collections.ArrayList]`
+$hosts              = Finalise-Hosts -hosts $hosts @args_finalise
 
 <#
     Save host file
@@ -269,21 +234,6 @@ Write-Output         "`t # Hosts: $($hosts.Count) `n"
     Join the host file on "`n" and add a blank line to the end of the file
 #>
 
-
-Write-Output         "Saving host file to: $out_file `n"
+Write-Output         "--> Saving $($hosts.Count) hosts to: $out_file"
 
 Save-Hosts           -hosts $hosts -out_file $out_file
-
-
-<#
-    Sleep
-
-    Give the user a chance to read the script output
-#>
-
-
-Write-Output         "Exiting in $exit_timeout seconds"
-
-Start-Sleep          -Seconds $exit_timeout
-
-exit
