@@ -91,8 +91,8 @@ if(Test-Path $file_sources -PathType Leaf)
         # Fetch the hosts
         # Add to hosts array
         Fetch-Hosts -host_sources $web_host_files -dir $dir_hosts `
-        | sort -Unique `
-        | % {if(!$hosts.Contains($_)){[void]$hosts.Add($_)}}           
+                    | sort -Unique `
+                    | % {if(!$hosts.Contains($_)){[void]$hosts.Add($_)}}
         
         # Clear the download directory
         Clear-HostDir $dir_hosts @args_rm_dwn_dir
