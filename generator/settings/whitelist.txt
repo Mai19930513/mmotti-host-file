@@ -1,3 +1,10 @@
+# MMMotti whitelist
+cdn.ampproject.org
+here.com
+s.youtube.com # youtube history
+test.com
+
+# anudeepND whitelist
 0.client-channel.google.com
 1drv.com
 2.android.pool.ntp.org
@@ -22,7 +29,6 @@ bing.com
 brightcove.net
 bufferapp.com
 c.s-microsoft.com
-cdn.ampproject.org
 cdn.cloudflare.net
 cdn.embedly.com
 cdn.optimizely.com
@@ -152,7 +158,6 @@ redirector.googlevideo.com
 s.gateway.messenger.live.com
 s.marketwatch.com
 s.shopify.com
-s.youtube.com
 s.ytimg.com
 s1.wp.com
 s2.youtube.com 
@@ -176,7 +181,6 @@ t0.ssl.ak.dynamic.tiles.virtualearth.net
 t0.ssl.ak.tiles.virtualearth.net
 tawk.to
 tedcdn.com
-test.com
 themoviedb.com
 thetvdb.com
 tinyurl.com
