@@ -1,11 +1,23 @@
-﻿<#
+﻿[CmdletBinding()]
+Param
+(
+    [ValidateNotNullOrEmpty()]
+    [string[]]
+    $web_host_files = $null
+)
+
+<#
     Reset variables
 
     To make sure those using PowerShell ISE execute the script with
     a clean slate.
 #>
 
-Remove-Variable * -ErrorAction SilentlyContinue; Remove-Module *; $error.Clear(); Clear-Host
+$blacklist = `
+$nxdomains = `
+$regex_removals = `
+$whitelist = `
+$wildcards = $null
 
 <#
     Include functions
@@ -52,8 +64,12 @@ Write-Output         "--> Fetching hosts"
 # Web hosts
 try
 {
-    # Read it
-    $web_host_files = Get-Content $file_sources -ErrorAction Stop | ? {$_}
+    # If the host sources are not set by the parameter
+    if(!$web_host_files)
+    {
+        # Read it
+        $web_host_files = Get-Content $file_sources -ErrorAction Stop | ? {$_}
+    }
 
     # Fetch the hosts
     # Add to hosts array
@@ -62,7 +78,7 @@ try
                 | % {if(!$hosts.Contains($_)){[void]$hosts.Add($_)}}
 }
 catch
-{Write-Output "--> !: Web hosts unavailable"}
+{"--> !: Web hosts unavailable"}
 
 # Local hosts
 try
@@ -76,7 +92,7 @@ try
                                     | % {if(!$hosts.Contains($_)){[void]$hosts.Add($_)}}
 }
 catch
-{Write-Output "--> !: Local blacklist unavailable"}
+{"--> !: Local blacklist unavailable"}
 
 # Quit in the event of no valid hosts
 if(!$hosts)
@@ -101,7 +117,7 @@ try
     $args_white_wcard.whitelist = $whitelist
 }
 catch
-{Write-Output "--> !: Whitelist unavailable"}
+{"--> !: Whitelist unavailable"}
 
 <#
     Fetch wildcards
@@ -133,7 +149,7 @@ try
     }
 }
 catch
-{Write-Output "--> !: Wildcards unavailable"}
+{"--> !: Wildcards unavailable"}
 
 <#
     Process Regex Removals
@@ -151,7 +167,7 @@ try
     $hosts          = Regex-Remove -regex_removals $regex_removals -hosts $hosts
 }
 catch
-{Write-Output "--> !: Regex removals unavailable"}
+{"--> !: Regex removals unavailable"}
 
 <#
     Remove host clutter
@@ -210,7 +226,7 @@ try
     $args_finalise.nxdomains = $nxdomains
 }
 catch
-{Write-Output "--> !: NXDOMAINS unavailable"}
+{"--> !: NXDOMAINS unavailable"}
 
 <#
     Finalise the hosts
@@ -227,6 +243,7 @@ try
 }
 catch
 {$PSCmdlet.WriteError($_)}
+
 <#
     Save host file
 
