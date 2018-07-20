@@ -13,6 +13,8 @@
 
 $blacklist = $filter_results = $filter_rules = $nxdomains = $web_host_sources = $null
 
+Clear-Host
+
 <#
     Initialise variables
 #>
@@ -141,25 +143,11 @@ try
                             # Add the processed rule to the hosts array
                             [void]$hosts_arr_l.Add("@dhell$rule")
 
-                            # || should filter something.com and *.something.com
-                            # Adhell should create these entries from the rule, so we don't need
-                            # to include them.
-                            $domain_result = $domain, "*.$domain"
+                            # Add *.something.com to the wildcards array
+                            if(!$wildcards_f_arr_l.Contains("*.$domain")){[void]$wildcards_f_arr_l.Add("*.$domain")}
 
-                            # For each domain result
-                            $domain_result | % {
-                                # If we have a wildcard, add it to the filter wildcards array
-                                # ready for regex removal
-                                if($_ -match "\*")
-                                {
-                                    if(!$wildcards_f_arr_l.Contains($_)){[void]$wildcards_f_arr_l.Add($_)}
-                                }
-                                else
-                                {
-                                    # Remove standard domain from host array
-                                    while($hosts_arr_l.Contains($_)){$hosts_arr_l.Remove($_)}
-                                }
-                            }
+                            # Remove something.com from the hosts array
+                            while($hosts_arr_l.Contains($domain)){$hosts_arr_l.Remove($domain)}
                          }
                 }
             }
@@ -210,14 +198,13 @@ Write-Output         "--> Searching for wildcards"
 try
 {
     # Extract wildcards from blacklist
-    Extract-Wildcards $blacklist `
-                        | sort -Unique `
-                        | % {if(!$wildcards_arr_l.Contains($_)){[void]$wildcards_arr_l.Add($_)}}
+    Extract-Wildcards            $blacklist `
+                                 | sort -Unique `
+                                 | % {if(!$wildcards_arr_l.Contains($_)){[void]$wildcards_arr_l.Add($_)}}
 
     # Remove conflicting wildcards
     Remove-Conflicting-Wildcards -wildcards $wildcards_arr_l -filter_wildcards $wildcards_f_arr_l -whitelist $whitelist_arr_l `
                                  | % {$wildcards_arr_l.Clear()}{[void]$wildcards_arr_l.Add($_)}
-
 
     # If there were no wildcards
     if(!$wildcards_arr_l)
@@ -236,15 +223,23 @@ Write-Output         "--> Processing Regex Removals"
 
 try
 {
-    # Fetch the removal criteria for standard wildcards
-    Fetch-Regex-Removals -wildcards $wildcards_arr_l `
-                         | % {[void]$regex_arr_l.Add($_)}
+    # If there are wildcards
+    if($wildcards_arr_l)
+    {
+        # Fetch the removal criteria for standard wildcards
+        Fetch-Regex-Removals -wildcards $wildcards_arr_l `
+                             | % {[void]$regex_arr_l.Add($_)}
+    }
 
-    # Fetch the removal criteria for filter wildcards
-    Fetch-Regex-Removals -wildcards $wildcards_f_arr_l `
-                         | % {if(!$regex_arr_l.Contains($_)){[void]$regex_arr_l.Add($_)}}
+    # If there are filter wildcards
+    if($wildcards_f_arr_l)
+    {
+        # Fetch the removal criteria for filter wildcards
+        Fetch-Regex-Removals -wildcards $wildcards_f_arr_l `
+                             | % {if(!$regex_arr_l.Contains($_)){[void]$regex_arr_l.Add($_)}}
+    }
 
-    # If there are items to process
+    # If we obtained any regex removals
     if($regex_arr_l)
     {
         # Regex remove hosts

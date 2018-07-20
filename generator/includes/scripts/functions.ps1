@@ -345,11 +345,11 @@ Function Remove-Conflicting-Wildcards
     )
   
     # Convert wildcards to arraylist ready for additions and removals
-    $wildcards | % {$wildcard_arr_list=[System.Collections.ArrayList]::new()}{[void]$wildcard_arr_list.Add($_)}
+    $wildcards | % {$wildcard_arr=[System.Collections.ArrayList]::new()}{[void]$wildcard_arr.Add($_)}
 
     # For each wildcard
     $wildcards         | % {
-        
+
         # Store the wildcard and regex version of wildcard
         $wcard       = $_
         $wcard_regex = Process-Wildcard-Regex $_
@@ -358,16 +358,16 @@ Function Remove-Conflicting-Wildcards
         # Remove it from the array list and iterate
         if(($whitelist -match $wcard_regex) -or ($filter_wildcards -match $wcard_regex))
         {
-            while($wildcard_arr_list.Contains($_))
+            while($wildcard_arr.Contains($_))
             {
-                $wildcard_arr_list.Remove($_);
+                $wildcard_arr.Remove($_);
             }
 
             return
         }
 
         # Count matches of wildcard against existing wildcard list
-        $wcard_match_count = ($wildcard_arr_list -match $wcard_regex).Count
+        $wcard_match_count = ($wildcard_arr -match $wcard_regex).Count
 
         # If there were two or more matches for a given wildcard
         # (We found an un-necessary wildcard)
@@ -375,21 +375,21 @@ Function Remove-Conflicting-Wildcards
         {
             # Specify our target wildcards for removal
             # Excluding the wildcard we used to match >= 2 results
-            $target_wcards = $wildcard_arr_list | ? {$_ -notcontains $wcard} `
+            $target_wcards = $wildcard_arr | ? {$_ -notcontains $wcard} `
                                                 | ? {$_ -match $wcard_regex}
         
             # For each target wildcard
             # While each target wildcard is present, remove it.
             $target_wcards | % {
-                while($wildcard_arr_list.Contains($_))
+                while($wildcard_arr.Contains($_))
                 {
-                    $wildcard_arr_list.Remove($_);
+                    $wildcard_arr.Remove($_);
                 }
             }      
         }
     }
 
-    return $wildcard_arr_list 
+    return $wildcard_arr
 }
 
 Function Fetch-Regex-Removals
