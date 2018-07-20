@@ -77,7 +77,7 @@ Function Extract-Filter-Domains
     (
        [Parameter(Mandatory=$true)]
        [string[]]
-       $hosts 
+       $hosts
     )
 
     # Set valid type options
@@ -90,6 +90,38 @@ Function Extract-Filter-Domains
     $hosts | Select-String "(?i)$filter_regex" -AllMatches `
            | % {$_.Matches.Value}
 
+}
+
+Function Extract-Adhell-Filters
+{
+    Param
+    (
+       [Parameter(Mandatory=$true)]
+       [string[]]
+       $hosts
+    )
+
+    # Specify valid delimiters
+    $valid_delims   = "(\|\|)"
+
+    # Regex to match domains within a filter list
+    $filter_regex   = "(?=.{4,253}\^)^$valid_delims((?:(?!-)[a-z0-9-]{1,63}(?<!-)\.)+[a-z]{2,63})(\^)"
+
+    $filter_matches = $hosts | Select-String "(?i)$filter_regex" -AllMatches
+
+    $filter_matches | % {
+
+        # Retrieve delimiter and domain
+        $delimiter = $_.Matches.Groups[1].Value
+        $domain    = $_.Matches.Groups[2].Value
+        $full      = $_.Matches.Groups[0].Value
+
+        [pscustomobject]@{
+            Rule = $full
+            Option = $delimiter
+            Domain = $domain
+        }
+    }
 }
 
 Function Extract-Domains
@@ -164,6 +196,33 @@ Function Parse-Hosts
       
     # Output hosts
     return $parsed_hosts
+}
+
+Function Remove-WhitelistedDomains
+{
+    Param
+    (
+        [Parameter(Mandatory=$true)]
+        [string[]]
+        $hosts,
+        [Parameter(Mandatory=$true)]
+        [string[]]
+        $whitelist
+    )
+
+    # Create a host arraylist
+    $hosts     | % {$hosts_arr=[System.Collections.ArrayList]::new()}{[void]$hosts_arr.Add($_)}
+
+    # For each wildcard
+    $whitelist | % {
+
+        while($hosts_arr.Contains($_))
+        {
+            $hosts_arr.Remove($_)
+        }
+    }
+
+    return $hosts_arr
 }
 
 <#
@@ -280,12 +339,14 @@ Function Remove-Conflicting-Wildcards
         [string[]]
         $wildcards,
         [string[]]
+        $filter_wildcards,
+        [string[]]
         $whitelist
     )
   
     # Convert wildcards to arraylist ready for additions and removals
     $wildcards | % {$wildcard_arr_list=[System.Collections.ArrayList]::new()}{[void]$wildcard_arr_list.Add($_)}
-           
+
     # For each wildcard
     $wildcards         | % {
         
@@ -293,9 +354,9 @@ Function Remove-Conflicting-Wildcards
         $wcard       = $_
         $wcard_regex = Process-Wildcard-Regex $_
 
-        # If the wildcard is whitelisted
+        # If the wildcard is whitelisted or matches a wildcard in the filter wildcards
         # Remove it from the array list and iterate
-        if($whitelist -match $wcard_regex)
+        if(($whitelist -match $wcard_regex) -or ($filter_wildcards -match $wcard_regex))
         {
             while($wildcard_arr_list.Contains($_))
             {
@@ -336,36 +397,14 @@ Function Fetch-Regex-Removals
 
     Param
     (
-        [string[]]
-        $whitelist,
+        [Parameter(Mandatory)]
         [string[]]
         $wildcards
     )
 
-    # Removals (whitelisted) items should be added to the regex remove array
-    # Something.com -> Remove exactly Something.com
-    # *Something.com -> Remove anything that ends in Something.com
-    
-
-    # For each whitelisted domain
-    $whitelist | ? {$_} | % {
-                    
-        # If the whitelisted item is a wildcard
-        if($_ -match "\*")
-        {
-            # Fetch the correct regex replace formatting
-            Process-Wildcard-Regex $_
-        }
-        else
-        # Otherwise, process as a standard domain
-        {
-            Write-Output "^$([regex]::Escape($_))$"
-        }
-    }
-
     # For each wildcard
     # Fetch the correct regex formatting and add to array
-    $wildcards | ? {$_} | % {Process-Wildcard-Regex $_}
+    $wildcards | % {Process-Wildcard-Regex $_}
 }
 
 Function Regex-Remove
@@ -376,10 +415,12 @@ Function Regex-Remove
         [string[]]
         $regex_removals,
         [Parameter(Mandatory=$true)]
-        [System.Collections.ArrayList]
+        [string[]]
         $hosts
     )
-    
+
+    $hosts | % {$hosts_arr=[System.Collections.ArrayList]::new()}{[void]$hosts_arr.Add($_)}
+
     # Loop through each regex and select only non-matching items
     foreach($regex in $regex_removals)
     {
@@ -388,14 +429,14 @@ Function Regex-Remove
 
         # Select hosts that do not match regex
         $hosts -match $regex | % {
-            while($hosts.Contains($_))
+            while($hosts_arr.Contains($_))
             {
-                $hosts.Remove($_)
+                $hosts_arr.Remove($_)
             }
         }
     }
 
-    return $hosts
+    return $hosts_arr
 }
 
 Function Remove-Host-Clutter
@@ -403,7 +444,7 @@ Function Remove-Host-Clutter
     Param
     (
         [Parameter(Mandatory=$true)]
-        
+        [string[]]
         $hosts
     )
 
@@ -540,29 +581,31 @@ Function Finalise-Hosts
     Param
     (
         [Parameter(Mandatory=$true)]
-        [System.Collections.ArrayList]
+        [String[]]
         $hosts,
         [string[]]
         $wildcards,
         [string[]]
         $nxdomains
     )
+
+    $hosts | % {$hosts_arr=[System.Collections.ArrayList]::new()}{[void]$hosts_arr.Add($_)}
     
     # Add wildcards
-    $wildcards    | ? {$_} | % {[void]$hosts.Add($_)}
+    $wildcards    | ? {$_} | % {[void]$hosts_arr.Add($_)}
 
     # Remove NXDOMAINS
     $nxdomains    | ? {$_} | % {
                       
-                    while($hosts.Contains($_))
+                    while($hosts_arr.Contains($_))
                     {
-                        $hosts.Remove($_)                    
+                        $hosts_arr.Remove($_)
                     }
     }
 
     
     # Output lowercase hosts
-    $hosts.toLower() | sort -Unique
+    $hosts_arr.toLower() | sort -Unique
 }
 
 Function Save-Hosts
@@ -580,9 +623,16 @@ Function Save-Hosts
     # Join on the new lines
     $hosts     = $hosts -join "`n"
 
-    # Add blank line to the end of the host file
-    $hosts += "`n"
+    # Add a new line to the end of the file
+    $hosts    += "`n"
 
     # Output to file
     [System.IO.File]::WriteAllText($out_file,$hosts)
+}
+
+Function No-Hosts
+{
+    Write-Output     "--> No hosts detected. Please check your configuration."
+    Start-Sleep      -Seconds 5
+    exit
 }
