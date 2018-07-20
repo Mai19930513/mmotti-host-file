@@ -1,2 +1,3 @@
 cdn.ampproject.org
 s.youtube.com # youtube history
+phonearena.com
