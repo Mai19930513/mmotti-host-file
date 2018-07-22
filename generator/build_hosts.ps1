@@ -11,20 +11,14 @@
     a clean slate.
 #>
 
-$whitelist = $blacklist = $filter_results = $filter_rules = $nxdomains = $web_host_sources = $fetched_hosts = $parsed_hosts = $null
-
-Clear-Host
+Remove-Variable * -ErrorAction SilentlyContinue; Remove-Module *; $error.Clear(); Clear-Host
 
 <#
-    Initialise variables
+    Initialise ArrayLists
 #>
 
-# Create empty ArrayLists
-#
-$wildcards_arr_l   = [System.Collections.ArrayList]::new()
 $wildcards_f_arr_l = [System.Collections.ArrayList]::new()
 $regex_arr_l       = [System.Collections.ArrayList]::new()
-$whitelist_arr_l   = [System.Collections.ArrayList]::new()
 $hosts_arr_l       = [System.Collections.ArrayList]::new()
 
 <#
@@ -32,7 +26,6 @@ $hosts_arr_l       = [System.Collections.ArrayList]::new()
 #>
 
 # Directories
-$dir_parent        = Split-Path $PSScriptRoot
 $dir_settings      = "$PSScriptRoot\settings"
 
 # Config files
@@ -43,9 +36,13 @@ $file_ah_filter    = "$dir_settings\adhell_specific\filter.txt"
 $file_nxdomains    = "$dir_settings\nxdomains.txt"
 
 # Settings
-$out_file          = "$dir_parent\hosts"
-$check_heartbeat   = $false
+$out_file          = "$(Split-Path $PSScriptRoot)\hosts"
 
+<#
+    Script settings
+#>
+
+$check_heartbeat   = $false
 
 <#
     Fetch whitelist
@@ -56,16 +53,15 @@ Write-Output         "--> Fetching whitelist"
 try
 {
     # Add whitelist to array
-    $whitelist     = Get-Content $file_whitelist -ErrorAction Stop | ? {$_}
+    $whitelist_content     = Get-Content $file_whitelist -ErrorAction Stop | ? {$_}
 
     # If there are whitelisted domains
-    if($whitelist)
+    if($whitelist_content)
     {
-        $whitelist = Parse-Hosts $whitelist `
-                     | sort -Unique
+        $parsed_whitelist  = Parse-Hosts $whitelist_content `
+                             | sort -Unique
 
-        Extract-Domains $whitelist `
-                    | % {$whitelist_arr_l.Clear()}{[void]$whitelist_arr_l.Add($_)}
+        $whitelist_arr     = Extract-Domains $parsed_whitelist
     }
     else {throw}
 }
@@ -82,13 +78,13 @@ Write-Output         "--> Fetching hosts"
 try
 {
     # Read from the file source
-    $web_host_sources = Get-Content $file_sources -ErrorAction Stop | ? {$_}
+    $sources_content         = Get-Content $file_sources -ErrorAction Stop | ? {$_}
 
     # If there are web sources
-    if($web_host_sources)
+    if($sources_content)
     {
         # Fetch the hosts
-        $fetched_hosts       = Fetch-Hosts $web_host_sources `
+        $fetched_hosts       = Fetch-Hosts $sources_content `
                                | sort -Unique
 
         # Parse the hosts
@@ -110,17 +106,17 @@ catch {"--> !: Web hosts unavailable"}
 try
 {
     # Read it
-    $blacklist     = Get-Content $file_blacklist -ErrorAction Stop | ? {$_}
+    $blacklist_content    = Get-Content $file_blacklist -ErrorAction Stop | ? {$_}
 
-    if($blacklist)
+    if($blacklist_content)
     {
         # Parse the blacklist file
-        $blacklist = Parse-Hosts $blacklist `
-                                 | sort -Unique
+        $parsed_blacklist = Parse-Hosts $blacklist_content `
+                            | sort -Unique
         
         # Extract domains from blacklist
-        Extract-Domains $blacklist `
-                        | % {if(!$hosts_arr_l.Contains($_)){[void]$hosts_arr_l.Add($_)}}
+        Extract-Domains     $parsed_blacklist `
+                            | % {if(!$hosts_arr_l.Contains($_)){[void]$hosts_arr_l.Add($_)}}
     } else {throw}
 }
 catch {"--> !: Local blacklist unavailable"}
@@ -129,11 +125,11 @@ catch {"--> !: Local blacklist unavailable"}
 try
 {
     # Read the config file
-    $filter_rules   = Get-Content $file_ah_filter -ErrorAction Stop | ? {$_} `
-                                  | sort -Unique
-    if($filter_rules)
+    $filter_content     = Get-Content $file_ah_filter -ErrorAction Stop | ? {$_} `
+                          | sort -Unique
+    if($filter_content)
     {
-        $filter_results =  Extract-Filters $filter_rules
+        $filter_results = Extract-Filters $filter_content
 
         # If we have filter rules to process
         if($filter_results)
@@ -148,7 +144,7 @@ try
                 {
                     '||' {
                             # Skip if whitelisted or already processed
-                            if($whitelist_arr_l -match "(^|\.)$domain")
+                            if($whitelist_arr -match "(^|\.)$domain")
                             {
                                 return
                             }
@@ -184,13 +180,12 @@ if(!$hosts_arr_l)
 else
 {
     # ... and items in the whitelist array
-    if($whitelist_arr_l)
+    if($whitelist_arr)
     {
         try
         {
             # Remove them
-            Remove-WhitelistedDomains -hosts $hosts_arr_l -whitelist $whitelist_arr_l `
-                                      | % {$hosts_arr_l.Clear()}{[void]$hosts_arr_l.Add($_)}
+            Remove-WhitelistedDomains -hosts $hosts_arr_l -whitelist $whitelist_arr
 
             # If there are no hosts after the whitelisted items are removed
             if(!$hosts_arr_l)
@@ -211,22 +206,20 @@ Write-Output         "--> Searching for wildcards"
 try
 {
     # Extract wildcards from blacklist
-    Extract-Wildcards            $blacklist `
-                                 | sort -Unique `
-                                 | % {if(!$wildcards_arr_l.Contains($_)){[void]$wildcards_arr_l.Add($_)}}
+    $wildcards_arr = Extract-Wildcards $parsed_blacklist `
+                     | sort -Unique
 
     # Remove conflicting wildcards
-    Remove-Conflicting-Wildcards -wildcards $wildcards_arr_l -filter_wildcards $wildcards_f_arr_l -whitelist $whitelist_arr_l `
-                                 | % {$wildcards_arr_l.Clear()}{[void]$wildcards_arr_l.Add($_)}
+
+    $wildcards_arr = Remove-Conflicting-Wildcards -wildcards $wildcards_arr -filter_wildcards $wildcards_f_arr_l -whitelist $whitelist_arr
 
     # If there were no wildcards
-    if(!$wildcards_arr_l)
+    if(!$wildcards_arr)
     {
         throw
     }
 }
 catch {"--> !: Wildcards unavailable"}
-
 
 <#
     Process Regex Removals
@@ -237,10 +230,10 @@ Write-Output         "--> Processing Regex Removals"
 try
 {
     # If there are wildcards
-    if($wildcards_arr_l)
+    if($wildcards_arr)
     {
         # Fetch the removal criteria for standard wildcards
-        Fetch-Regex-Removals -wildcards $wildcards_arr_l `
+        Fetch-Regex-Removals -wildcards $wildcards_arr `
                              | % {[void]$regex_arr_l.Add($_)}
     }
 
@@ -256,8 +249,7 @@ try
     if($regex_arr_l)
     {
         # Regex remove hosts
-        Regex-Remove -regex_removals $regex_arr_l -hosts $hosts_arr_l `
-                     | % {$hosts_arr_l.Clear()}{[void]$hosts_arr_l.Add($_)}
+        Regex-Remove -regex_removals $regex_arr_l -hosts $hosts_arr_l
     }
     else {throw}
 }
@@ -323,8 +315,8 @@ Write-Output         "--> Finalising hosts"
 
 try
 {
-    Finalise-Hosts -hosts $hosts_arr_l -wildcards $wildcards_arr_l -nxdomains $nxdomains `
-                   | % {$hosts_arr_l.Clear()}{[void]$hosts_arr_l.Add($_)}
+    # Finalise hosts are store in standard array
+    $hosts_arr     = Finalise-Hosts -hosts $hosts_arr_l -wildcards $wildcards_arr -nxdomains $nxdomains
 }
 catch
 {$PSCmdlet.WriteError($_)}
@@ -335,10 +327,10 @@ catch
     Join the host file on "`n" and add a blank line to the end of the file
 #>
 
-Write-Output          "--> Saving $($hosts_arr_l.Count) hosts to: $out_file"
+Write-Output          "--> Saving $($hosts_arr.Count) hosts to: $out_file"
 
 try
 {
-    Save-Hosts        -hosts $hosts_arr_l -out_file $out_file
+    Save-Hosts        -hosts $hosts_arr -out_file $out_file
 }
 catch {$PSCmdlet.ThrowTerminatingError($_)}

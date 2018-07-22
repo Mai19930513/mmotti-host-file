@@ -183,26 +183,21 @@ Function Remove-WhitelistedDomains
     Param
     (
         [Parameter(Mandatory=$true)]
-        [string[]]
+        [System.Collections.ArrayList]
         $hosts,
         [Parameter(Mandatory=$true)]
         [string[]]
         $whitelist
     )
 
-    # Create a host arraylist
-    $hosts     | % {$hosts_arr=[System.Collections.ArrayList]::new()}{[void]$hosts_arr.Add($_)}
-
-    # For each wildcard
+    # For each whitelisted item
     $whitelist | % {
-
-        while($hosts_arr.Contains($_))
+        # Remove it from the host array
+        while($hosts.Contains($_))
         {
-            $hosts_arr.Remove($_)
+            $hosts.Remove($_)
         }
     }
-
-    return $hosts_arr
 }
 
 <#
@@ -328,7 +323,7 @@ Function Remove-Conflicting-Wildcards
     $wildcards | % {$wildcard_arr=[System.Collections.ArrayList]::new()}{[void]$wildcard_arr.Add($_)}
 
     # For each wildcard
-    $wildcards         | % {
+    $wildcards | % {
 
         # Store the wildcard and regex version of wildcard
         $wcard       = $_
@@ -395,11 +390,9 @@ Function Regex-Remove
         [string[]]
         $regex_removals,
         [Parameter(Mandatory=$true)]
-        [string[]]
+        [System.Collections.ArrayList]
         $hosts
     )
-
-    $hosts | % {$hosts_arr=[System.Collections.ArrayList]::new()}{[void]$hosts_arr.Add($_)}
 
     # Loop through each regex and select only non-matching items
     foreach($regex in $regex_removals)
@@ -409,14 +402,12 @@ Function Regex-Remove
 
         # Select hosts that do not match regex
         $hosts -match $regex | % {
-            while($hosts_arr.Contains($_))
+            while($hosts.Contains($_))
             {
-                $hosts_arr.Remove($_)
+                $hosts.Remove($_)
             }
         }
     }
-
-    return $hosts_arr
 }
 
 Function Remove-Host-Clutter
@@ -561,30 +552,29 @@ Function Finalise-Hosts
     Param
     (
         [Parameter(Mandatory=$true)]
-        [String[]]
+        [System.Collections.ArrayList]
         $hosts,
         [string[]]
         $wildcards,
         [string[]]
         $nxdomains
     )
-
-    $hosts | % {$hosts_arr=[System.Collections.ArrayList]::new()}{[void]$hosts_arr.Add($_)}
     
     # Add wildcards
-    $wildcards    | ? {$_} | % {[void]$hosts_arr.Add($_)}
+    $wildcards    | ? {$_} | % {[void]$hosts.Add($_)}
 
     # Remove NXDOMAINS
     $nxdomains    | ? {$_} | % {
 
-        while($hosts_arr.Contains($_))
+        while($hosts.Contains($_))
         {
-            $hosts_arr.Remove($_)
+            $hosts.Remove($_)
         }
     }
-  
-    # Output lowercase hosts
-    $hosts_arr.toLower() | sort -Unique
+
+    # Force lower case and remove duplicates
+    # This will convert to standard array
+    $hosts.toLower() | sort -Unique
 }
 
 Function Save-Hosts
