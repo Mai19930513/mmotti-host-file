@@ -61,38 +61,14 @@
         }
 
         # Read it
-        $WHL = (Get-Content $dwn_host) | ? {$_}
-
-        # Parse it
-        Parse-Hosts $WHL
+        Get-Content $dwn_host | ? {$_}
 
         # Clear the download
         Remove-Item $dwn_host
     }   
 }
 
-Function Extract-Filter-Domains
-{
-    Param
-    (
-       [Parameter(Mandatory=$true)]
-       [string[]]
-       $hosts
-    )
-
-    # Set valid type options
-    $filter_type    = "important|third-party|popup|subdocument|websocket"
-       
-    # Regex to match domains within a filter list
-    $filter_regex   = "(?=.{4,253}\^)((?<=^[|]{2})(((?!-)[a-z0-9-]{1,63}(?<!-)\.)+[a-z]{2,63})(?=\^(?:[$](?:$filter_type))?$))"
-
-    # Output valid filter domains
-    $hosts | Select-String "(?i)$filter_regex" -AllMatches `
-           | % {$_.Matches.Value}
-
-}
-
-Function Extract-Adhell-Filters
+Function Extract-Filters
 {
     Param
     (
@@ -122,6 +98,27 @@ Function Extract-Adhell-Filters
             Domain = $domain
         }
     }
+}
+
+Function Extract-Filter-Domains
+{
+    Param
+    (
+       [Parameter(Mandatory=$true)]
+       [string[]]
+       $hosts
+    )
+
+    # Set valid type options
+    $filter_type    = "important|third-party|popup|subdocument|websocket"
+
+    # Regex to match domains within a filter list
+    $filter_regex   = "(?=.{4,253}\^)((?<=^[|]{2})(((?!-)[a-z0-9-]{1,63}(?<!-)\.)+[a-z]{2,63})(?=\^(?:[$](?:$filter_type))?$))"
+
+    # Output valid filter domains
+    $hosts | Select-String "(?i)$filter_regex" -AllMatches `
+           | % {$_.Matches.Value}
+
 }
 
 Function Extract-Domains
@@ -168,34 +165,17 @@ Function Parse-Hosts
         [string[]]
         $hosts
     )
- 
+    
     # Remove local deadzone
     # Remove user comments
     # Remove whitespace
     # Exclude blank lines
-    $parsed_hosts = $hosts -replace '127.0.0.1'`
-                           -replace '0.0.0.0'`
-                           -replace '\s*(?:#.*)$'`
-                           -replace '\s+'`
-                           | ? {$_}
-
-    # Check for filter lists
-    $filter_list  = Extract-Filter-Domains $parsed_hosts
-
-    if($filter_list)
-    {
-        $parsed_hosts = $filter_list
-    }
-    else
-    {
-        $parsed_hosts = Extract-Domains $parsed_hosts
-    }
-
-    # Remove WWW prefix
-    $parsed_hosts  = $parsed_hosts -replace "^www(?:[0-9]{1,3})?(?:\.)"
-      
-    # Output hosts
-    return $parsed_hosts
+    $hosts  -replace '127.0.0.1'`
+            -replace '0.0.0.0'`
+            -replace '(?:^|[^\S\n]+)#.*$'`
+            -replace '\s+'`
+            -replace '^(?:\|\|)?www(?:[0-9]{1,3})?(?:\.)'`
+            | ? {$_}
 }
 
 Function Remove-WhitelistedDomains
@@ -596,14 +576,13 @@ Function Finalise-Hosts
 
     # Remove NXDOMAINS
     $nxdomains    | ? {$_} | % {
-                      
-                    while($hosts_arr.Contains($_))
-                    {
-                        $hosts_arr.Remove($_)
-                    }
-    }
 
-    
+        while($hosts_arr.Contains($_))
+        {
+            $hosts_arr.Remove($_)
+        }
+    }
+  
     # Output lowercase hosts
     $hosts_arr.toLower() | sort -Unique
 }

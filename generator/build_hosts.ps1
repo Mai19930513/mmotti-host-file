@@ -11,7 +11,7 @@
     a clean slate.
 #>
 
-$blacklist = $filter_results = $filter_rules = $nxdomains = $web_host_sources = $null
+$whitelist = $blacklist = $filter_results = $filter_rules = $nxdomains = $web_host_sources = $fetched_hosts = $parsed_hosts = $null
 
 Clear-Host
 
@@ -56,13 +56,15 @@ Write-Output         "--> Fetching whitelist"
 try
 {
     # Add whitelist to array
-    Get-Content      $file_whitelist -ErrorAction Stop | ? {$_} `
-                     | % {[void]$whitelist_arr_l.add($_)}
+    $whitelist     = Get-Content $file_whitelist -ErrorAction Stop | ? {$_}
 
     # If there are whitelisted domains
-    if($whitelist_arr_l)
+    if($whitelist)
     {
-        Parse-Hosts $whitelist_arr_l `
+        $whitelist = Parse-Hosts $whitelist `
+                     | sort -Unique
+
+        Extract-Domains $whitelist `
                     | % {$whitelist_arr_l.Clear()}{[void]$whitelist_arr_l.Add($_)}
     }
     else {throw}
@@ -86,10 +88,19 @@ try
     if($web_host_sources)
     {
         # Fetch the hosts
-        # Add to hosts array
-        Fetch-Hosts      -host_sources $web_host_sources `
-                         | sort -Unique `
-                         | % {[void]$hosts_arr_l.Add($_)}
+        $fetched_hosts       = Fetch-Hosts $web_host_sources `
+                               | sort -Unique
+
+        # Parse the hosts
+        $parsed_hosts        = Parse-Hosts $fetched_hosts
+
+        # Extract the domains
+        Extract-Domains        $parsed_hosts `
+                               | % {[void]$hosts_arr_l.Add($_)}
+
+        # Extract the filter domains
+        Extract-Filter-Domains $parsed_hosts `
+                               | % {if(!$hosts_arr_l.Contains($_)){[void]$hosts_arr_l.Add($_)}}
     }
     else {throw}
 }
@@ -99,14 +110,17 @@ catch {"--> !: Web hosts unavailable"}
 try
 {
     # Read it
-    $blacklist           = Get-Content $file_blacklist -ErrorAction Stop | ? {$_}
+    $blacklist     = Get-Content $file_blacklist -ErrorAction Stop | ? {$_}
 
     if($blacklist)
     {
-        # Fetch hosts
-        # if not already in the array, add the host to it.
-        Parse-Hosts         $blacklist | sort -Unique `
-                                       | % {if(!$hosts_arr_l.Contains($_)){[void]$hosts_arr_l.Add($_)}}
+        # Parse the blacklist file
+        $blacklist = Parse-Hosts $blacklist `
+                                 | sort -Unique
+        
+        # Extract domains from blacklist
+        Extract-Domains $blacklist `
+                        | % {if(!$hosts_arr_l.Contains($_)){[void]$hosts_arr_l.Add($_)}}
     } else {throw}
 }
 catch {"--> !: Local blacklist unavailable"}
@@ -114,15 +128,14 @@ catch {"--> !: Local blacklist unavailable"}
 # Process Adhell specific filters
 try
 {
-    # Read it
+    # Read the config file
     $filter_rules   = Get-Content $file_ah_filter -ErrorAction Stop | ? {$_} `
                                   | sort -Unique
     if($filter_rules)
     {
-        # Extract the rules / instructions
-        $filter_results = Extract-Adhell-Filters $filter_rules
+        $filter_results =  Extract-Filters $filter_rules
 
-        # If there are valid rules / instructions
+        # If we have filter rules to process
         if($filter_results)
         {
             $filter_results | % {
@@ -148,15 +161,15 @@ try
 
                             # Remove something.com from the hosts array
                             while($hosts_arr_l.Contains($domain)){$hosts_arr_l.Remove($domain)}
-                         }
+                          }
                 }
             }
         }
-        else {throw }
+        else {throw}
     }
     else {throw}
 }
-catch {"--> !: No adhell rules detected"}
+catch {"--> !: Filter rules unavailable"}
 
 <#
     Remove whitelisted entries
