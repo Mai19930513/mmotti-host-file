@@ -17,7 +17,6 @@ Remove-Variable * -ErrorAction SilentlyContinue; Remove-Module *; $error.Clear()
     Initialise ArrayLists
 #>
 
-$wildcards_f_arr_l = [System.Collections.ArrayList]::new()
 $regex_arr_l       = [System.Collections.ArrayList]::new()
 $hosts_arr_l       = [System.Collections.ArrayList]::new()
 
@@ -32,7 +31,6 @@ $dir_settings      = "$PSScriptRoot\settings"
 $file_sources      = "$dir_settings\sources.txt"
 $file_blacklist    = "$dir_settings\blacklist.txt"
 $file_whitelist    = "$dir_settings\whitelist.txt"
-$file_ah_filter    = "$dir_settings\adhell_specific\filter.txt"
 $file_nxdomains    = "$dir_settings\nxdomains.txt"
 
 # Settings
@@ -121,52 +119,6 @@ try
 }
 catch {"--> !: Local blacklist unavailable"}
 
-# Process Adhell specific filters
-try
-{
-    # Read the config file
-    $filter_content     = Get-Content $file_ah_filter -ErrorAction Stop | ? {$_} `
-                          | sort -Unique
-    if($filter_content)
-    {
-        $filter_results = Extract-Filters $filter_content
-
-        # If we have filter rules to process
-        if($filter_results)
-        {
-            $filter_results | % {
-
-                $rule   = $_.Rule
-                $domain = $_.Domain
-                $option = $_.Option
-
-                switch ($option)
-                {
-                    '||' {
-                            # Skip if whitelisted or already processed
-                            if($whitelist_arr -match "(^|\.)$domain")
-                            {
-                                return
-                            }
-
-                            # Add the processed rule to the hosts array
-                            [void]$hosts_arr_l.Add("@dhell$rule")
-
-                            # Add *.something.com to the wildcards array
-                            if(!$wildcards_f_arr_l.Contains("*.$domain")){[void]$wildcards_f_arr_l.Add("*.$domain")}
-
-                            # Remove something.com from the hosts array
-                            while($hosts_arr_l.Contains($domain)){$hosts_arr_l.Remove($domain)}
-                          }
-                }
-            }
-        }
-        else {throw}
-    }
-    else {throw}
-}
-catch {"--> !: Filter rules unavailable"}
-
 <#
     Remove whitelisted entries
 #>
@@ -211,7 +163,7 @@ try
 
     # Remove conflicting wildcards
 
-    $wildcards_arr = Remove-Conflicting-Wildcards -wildcards $wildcards_arr -filter_wildcards $wildcards_f_arr_l -whitelist $whitelist_arr
+    $wildcards_arr = Remove-Conflicting-Wildcards -wildcards $wildcards_arr -whitelist $whitelist_arr
 
     # If there were no wildcards
     if(!$wildcards_arr)
@@ -236,14 +188,7 @@ try
         Fetch-Regex-Removals -wildcards $wildcards_arr `
                              | % {[void]$regex_arr_l.Add($_)}
     }
-
-    # If there are filter wildcards
-    if($wildcards_f_arr_l)
-    {
-        # Fetch the removal criteria for filter wildcards
-        Fetch-Regex-Removals -wildcards $wildcards_f_arr_l `
-                             | % {if(!$regex_arr_l.Contains($_)){[void]$regex_arr_l.Add($_)}}
-    }
+    else {throw}
 
     # If we obtained any regex removals
     if($regex_arr_l)

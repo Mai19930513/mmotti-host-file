@@ -68,38 +68,6 @@
     }   
 }
 
-Function Extract-Filters
-{
-    Param
-    (
-       [Parameter(Mandatory=$true)]
-       [string[]]
-       $hosts
-    )
-
-    # Specify valid delimiters
-    $valid_delims   = "(\|\|)"
-
-    # Regex to match domains within a filter list
-    $filter_regex   = "(?=.{4,253}\^)^$valid_delims((?:(?!-)[a-z0-9-]{1,63}(?<!-)\.)+[a-z]{2,63})(\^)"
-
-    $filter_matches = $hosts | Select-String "(?i)$filter_regex" -AllMatches
-
-    $filter_matches | % {
-
-        # Retrieve delimiter and domain
-        $delimiter = $_.Matches.Groups[1].Value
-        $domain    = $_.Matches.Groups[2].Value
-        $full      = $_.Matches.Groups[0].Value
-
-        [pscustomobject]@{
-            Rule = $full
-            Option = $delimiter
-            Domain = $domain
-        }
-    }
-}
-
 Function Extract-Filter-Domains
 {
     Param
@@ -314,8 +282,6 @@ Function Remove-Conflicting-Wildcards
         [string[]]
         $wildcards,
         [string[]]
-        $filter_wildcards,
-        [string[]]
         $whitelist
     )
   
@@ -329,9 +295,9 @@ Function Remove-Conflicting-Wildcards
         $wcard       = $_
         $wcard_regex = Process-Wildcard-Regex $_
 
-        # If the wildcard is whitelisted or matches a wildcard in the filter wildcards
+        # If the wildcard is whitelisted
         # Remove it from the array list and iterate
-        if(($whitelist -match $wcard_regex) -or ($filter_wildcards -match $wcard_regex))
+        if($whitelist -match $wcard_regex)
         {
             while($wildcard_arr.Contains($_))
             {
