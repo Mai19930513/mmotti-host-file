@@ -118,7 +118,7 @@ Function Extract-Wildcards
     )
 
     # Regex to match wildcards
-    $wildcard_regex = "^\*([A-Z0-9-_.]+)$|^([A-Z0-9-_.]+)\*$|^\*([A-Z0-9-_.]+)\*$"
+    $wildcard_regex = "(?im)(?=^[*]|.*[*]$)^(?:\*[.-]?)?(?:(?!-)[a-z0-9-]+(?:(?<!-)\.)?)+(?:[a-z0-9]+)(?:[.-]?\*)?$"
 
     # Output valid wildcards
     $hosts | Select-String "(?i)$wildcard_regex" -AllMatches `
