@@ -81,7 +81,7 @@ Function Extract-Filter-Domains
     $filter_type    = "important|third-party|popup|subdocument|websocket"
 
     # Regex to match domains within a filter list
-    $filter_regex   = "(?=.{4,253}\^)((?<=^[|]{2})(((?!-)[a-z0-9-]{1,63}(?<!-)\.)+[a-z]{2,63})(?=\^(?:[$](?:$filter_type))?$))"
+    $filter_regex   = "(?:(?<=^\|\|)(?:(?:(?!-)[a-z0-9-]{1,63}(?<!-)\.)+[a-z]{2,63})(?=\^(?:[$](?:$filter_type))?$))"
 
     # Output valid filter domains
     $hosts | Select-String "(?i)$filter_regex" -AllMatches `
@@ -99,7 +99,7 @@ Function Extract-Domains
     )
 
     # Regex to match standard domains
-    $domain_regex   = "(?=^.{4,253}$)(^((?!-)[a-z0-9-]{1,63}(?<!-)\.)+[a-z]{2,63}$)"
+    $domain_regex   = "(?=^.{4,253}$)^(?:(?!-)[a-z0-9-]{1,63}(?<!-)\.)+[a-z]{2,63}$"
 
     # Output valid domains
     $hosts | Select-String '(?i)(localhost)' -NotMatch `
@@ -118,7 +118,7 @@ Function Extract-Wildcards
     )
 
     # Regex to match wildcards
-    $wildcard_regex = "(?im)(?=^[*]|.*[*]$)^(?:\*[.-]?)?(?:(?!-)[a-z0-9-]+(?:(?<!-)\.)?)+(?:[a-z0-9]+)(?:[.-]?\*)?$"
+    $wildcard_regex = "(?=^\*|.*\*$)^(?:\*[.-]?)?(?:(?!-)[a-z0-9-]+(?:(?<!-)\.)?)+(?:[a-z0-9]+)(?:[.-]?\*)?$"
 
     # Output valid wildcards
     $hosts | Select-String "(?i)$wildcard_regex" -AllMatches `
