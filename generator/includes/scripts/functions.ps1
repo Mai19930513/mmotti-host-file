@@ -77,15 +77,12 @@ Function Extract-Filter-Domains
        $hosts
     )
 
-    # Set valid type options
-    $filter_type    = "important|third-party|popup|subdocument|websocket"
-
     # Regex to match domains within a filter list
-    $filter_regex   = "(?:(?<=^\|\|)(?:(?:(?!-)[a-z0-9-]{1,63}(?<!-)\.)+[a-z]{2,63})(?=\^(?:[$](?:$filter_type))?$))"
+    $filter_regex   = "^\|{2}((?:[a-z0-9](?:[a-z0-9-]*[a-z0-9])?\.)+[a-z]{2,})\^(?:\`$(?:third-party))?$"
 
     # Output valid filter domains
     $hosts | Select-String "(?i)$filter_regex" -AllMatches `
-           | % {$_.Matches.Value}
+           | % {$_.Matches.Groups[1].Value}
 
 }
 
@@ -99,7 +96,7 @@ Function Extract-Domains
     )
 
     # Regex to match standard domains
-    $domain_regex   = "(?=^.{4,253}$)^(?:(?!-)[a-z0-9-]{1,63}(?<!-)\.)+[a-z]{2,63}$"
+    $domain_regex   = "^(?=.{4,253}$)(?:[a-z0-9](?:[a-z0-9-]*[a-z0-9])?\.)+[a-z]{2,}$"
 
     # Output valid domains
     $hosts | Select-String '(?i)(localhost)' -NotMatch `
