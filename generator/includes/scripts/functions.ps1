@@ -78,7 +78,7 @@ Function Extract-Filter-Domains
     )
 
     # Regex to match domains within a filter list
-    $filter_regex   = "^\|{2}((?:[a-z0-9](?:[a-z0-9-]*[a-z0-9])?\.)+[a-z]{2,})\^(?:\`$(?:third-party))?$"
+    $filter_regex   = "^\|{2}((?:[a-z0-9](?:[a-z0-9-]*[a-z0-9])?\.)+[a-z]{2,})\^(?:\`$(?:[a-z]+,)?third-party)?$"
 
     # Output valid filter domains
     $hosts | Select-String "(?i)$filter_regex" -AllMatches `
