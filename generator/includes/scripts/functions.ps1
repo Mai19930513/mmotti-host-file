@@ -133,13 +133,14 @@ Function Parse-Hosts
     
     # Remove local deadzone
     # Remove user comments
+    # Replace all lines that do not start with a-z, 0-9, * or ||
     # Remove whitespace
     # Exclude blank lines
-    $hosts  -replace '127.0.0.1'`
-            -replace '0.0.0.0'`
+    $hosts  -replace '^(?![a-z0-9*]|\|{2}).+$'`
+            -replace '^127.0.0.1\s+'`
+            -replace '^0.0.0.0\s+'`
             -replace '(?:^|[^\S\n]+)#.*$'`
             -replace '\s+'`
-            -replace '^(?:\|\|)?www(?:[0-9]{1,3})?(?:\.)'`
             | ? {$_}
 }
 
@@ -276,17 +277,17 @@ Function Remove-Conflicting-Wildcards
     Param
     (
         [Parameter(Mandatory=$true)]
-        [string[]]
-        $wildcards,
+        [System.Collections.ArrayList]
+        $wildcards_arr_l,
         [string[]]
         $whitelist
     )
   
-    # Convert wildcards to arraylist ready for additions and removals
-    $wildcards | % {$wildcard_arr=[System.Collections.ArrayList]::new()}{[void]$wildcard_arr.Add($_)}
+    # Create a dummy array to iterate through
+    [string[]]$wildcards_tmp = $wildcards_arr_l
 
     # For each wildcard
-    $wildcards | % {
+    $wildcards_tmp | % {
 
         # Store the wildcard and regex version of wildcard
         $wcard       = $_
@@ -296,16 +297,16 @@ Function Remove-Conflicting-Wildcards
         # Remove it from the array list and iterate
         if($whitelist -match $wcard_regex)
         {
-            while($wildcard_arr.Contains($_))
+            while($wildcards_arr_l.Contains($_))
             {
-                $wildcard_arr.Remove($_);
+                $wildcards_arr_l.Remove($_);
             }
 
             return
         }
 
         # Count matches of wildcard against existing wildcard list
-        $wcard_match_count = ($wildcard_arr -match $wcard_regex).Count
+        $wcard_match_count = ($wildcards_arr_l -match $wcard_regex).Count
 
         # If there were two or more matches for a given wildcard
         # (We found an un-necessary wildcard)
@@ -313,21 +314,19 @@ Function Remove-Conflicting-Wildcards
         {
             # Specify our target wildcards for removal
             # Excluding the wildcard we used to match >= 2 results
-            $target_wcards = $wildcard_arr | ? {$_ -notcontains $wcard} `
-                                                | ? {$_ -match $wcard_regex}
+            $target_wcards = $wildcards_arr_l | ? {$_ -notcontains $wcard} `
+                                              | ? {$_ -match $wcard_regex}
         
             # For each target wildcard
             # While each target wildcard is present, remove it.
             $target_wcards | % {
-                while($wildcard_arr.Contains($_))
+                while($wildcards_arr_l.Contains($_))
                 {
-                    $wildcard_arr.Remove($_);
+                    $wildcards_arr_l.Remove($_);
                 }
             }      
         }
     }
-
-    return $wildcard_arr
 }
 
 Function Fetch-Regex-Removals
@@ -378,43 +377,40 @@ Function Remove-Host-Clutter
     Param
     (
         [Parameter(Mandatory=$true)]
-        [string[]]
-        $hosts
+        [System.Collections.ArrayList]
+        $hosts_arr_l
     )
 
-    # Create duplicate array for removals
-    # Convert hosts to arraylist ready for additions and removals
-    $hosts | % {$cleaned_hosts=[System.Collections.ArrayList]::new()}{[void]$cleaned_hosts.Add($_)}
+    # Create a dummy array for iteration
+    [string[]]$hosts_tmp = $hosts_arr_l
 
     # Reverse each string
     # Sort them again
     # Set initial variables
-    $hosts | % {Reverse-String $_} `
-           | sort `
-           | % {$previous_host=$null} {
+    $hosts_tmp | % {Reverse-String $_} `
+               | sort `
+               | % {$previous_host=$null} {
 
-            # If this is the first host to process 
-            # or the reversed string is not like the previous
-            if((!$previous_host) -or ($_ -notlike "$previous_host.*"))
-            {
-                # Set the current host to this host
-                $previous_host = $_
-            }
-            # else, the host is like the previous
-            else
-            {
-                # Re-reverse the string
-                $_ = Reverse-String $_
+                    # If this is the first host to process
+                    # or the reversed string is not like the previous
+                    if((!$previous_host) -or ($_ -notlike "$previous_host.*"))
+                    {
+                        # Set the current host to this host
+                        $previous_host = $_
+                    }
+                    # else, the host is like the previous
+                    else
+                    {
+                        # Re-reverse the string
+                        $_ = Reverse-String $_
                 
-                # Remove it from the hosts array
-                while($cleaned_hosts.Contains($_))
-                {
-                    $cleaned_hosts.Remove($_)
-                }
-            }
-    } 
-    
-    return $cleaned_hosts
+                        # Remove it from the hosts array
+                        while($hosts_arr_l.Contains($_))
+                        {
+                            $hosts_arr_l.Remove($_)
+                        }
+                    }
+    }
 }
 
 Function Check-Heartbeat

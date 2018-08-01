@@ -19,6 +19,7 @@ Remove-Variable * -ErrorAction SilentlyContinue; Remove-Module *; $error.Clear()
 
 $regex_arr_l       = [System.Collections.ArrayList]::new()
 $hosts_arr_l       = [System.Collections.ArrayList]::new()
+$wildcards_arr_l   = [System.Collections.ArrayList]::new()
 
 <#
     Set script parameters
@@ -94,7 +95,12 @@ try
 
         # Extract the filter domains
         Extract-Filter-Domains $parsed_hosts `
-                               | % {if(!$hosts_arr_l.Contains($_)){[void]$hosts_arr_l.Add($_)}}
+                               | % {
+                                        # Add something.com to host arraylist
+                                        if(!$hosts_arr_l.Contains($_)){[void]$hosts_arr_l.Add($_)}
+                                        # Add *.something.com to host arraylist
+                                        [void]$wildcards_arr_l.Add("*.$_")
+                                   }
     }
     else {throw}
 }
@@ -158,15 +164,16 @@ Write-Output         "--> Searching for wildcards"
 try
 {
     # Extract wildcards from blacklist
-    $wildcards_arr = Extract-Wildcards $parsed_blacklist `
-                     | sort -Unique
+    Extract-Wildcards $parsed_blacklist `
+                      | % {if(!$wildcards_arr_l.Contains($_)){[void]$wildcards_arr_l.Add($_)}}
 
     # Remove conflicting wildcards
+    # Add to arraylist for further additions later
+    Remove-Conflicting-Wildcards -wildcards $wildcards_arr_l -whitelist $whitelist_arr
 
-    $wildcards_arr = Remove-Conflicting-Wildcards -wildcards $wildcards_arr -whitelist $whitelist_arr
 
     # If there were no wildcards
-    if(!$wildcards_arr)
+    if(!$wildcards_arr_l)
     {
         throw
     }
@@ -182,10 +189,10 @@ Write-Output         "--> Processing Regex Removals"
 try
 {
     # If there are wildcards
-    if($wildcards_arr)
+    if($wildcards_arr_l)
     {
         # Fetch the removal criteria for standard wildcards
-        Fetch-Regex-Removals -wildcards $wildcards_arr `
+        Fetch-Regex-Removals -wildcards $wildcards_arr_l `
                              | % {[void]$regex_arr_l.Add($_)}
     }
     else {throw}
@@ -199,20 +206,6 @@ try
     else {throw}
 }
 catch {"--> !: Regex removals unavailable"}
-
-<#
-    Remove host clutter
-#>
-
-Write-Output         "--> Removing host clutter"
-
-try
-{
-    Remove-Host-Clutter $hosts_arr_l `
-                        | % {$hosts_arr_l.Clear()}{[void]$hosts_arr_l.Add($_)}
-}
-catch
-{$PSCmdlet.WriteError($_)}
 
 <#
     Check for dead hosts (NXDOMAINS)
@@ -261,7 +254,7 @@ Write-Output         "--> Finalising hosts"
 try
 {
     # Finalise hosts are store in standard array
-    $hosts_arr     = Finalise-Hosts -hosts $hosts_arr_l -wildcards $wildcards_arr -nxdomains $nxdomains
+    $hosts_arr     = Finalise-Hosts -hosts $hosts_arr_l -wildcards $wildcards_arr_l -nxdomains $nxdomains
 }
 catch
 {$PSCmdlet.WriteError($_)}
