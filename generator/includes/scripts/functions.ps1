@@ -130,15 +130,14 @@ Function Parse-Hosts
         [string[]]
         $hosts
     )
-    
+
+    # Replace all lines that do not start with a-z, 0-9, * or ||
     # Remove local deadzone
     # Remove user comments
-    # Replace all lines that do not start with a-z, 0-9, * or ||
     # Remove whitespace
     # Exclude blank lines
     $hosts  -replace '^(?![a-z0-9*]|\|{2}).+$'`
-            -replace '^127.0.0.1\s+'`
-            -replace '^0.0.0.0\s+'`
+            -replace '^(?:\d{1,3}\.){3}\d{1,3}\s+'`
             -replace '(?:^|[^\S\n]+)#.*$'`
             -replace '\s+'`
             | ? {$_}

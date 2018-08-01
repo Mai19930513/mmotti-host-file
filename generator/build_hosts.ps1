@@ -98,7 +98,7 @@ try
                                | % {
                                         # Add something.com to host arraylist
                                         if(!$hosts_arr_l.Contains($_)){[void]$hosts_arr_l.Add($_)}
-                                        # Add *.something.com to host arraylist
+                                        # Add *.something.com to wildcard arraylist
                                         [void]$wildcards_arr_l.Add("*.$_")
                                    }
     }
@@ -168,7 +168,6 @@ try
                       | % {if(!$wildcards_arr_l.Contains($_)){[void]$wildcards_arr_l.Add($_)}}
 
     # Remove conflicting wildcards
-    # Add to arraylist for further additions later
     Remove-Conflicting-Wildcards -wildcards $wildcards_arr_l -whitelist $whitelist_arr
 
 
